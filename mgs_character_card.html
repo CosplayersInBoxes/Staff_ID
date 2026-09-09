@@ -668,6 +668,110 @@ const paramsList = van.state([
 
 const dialogOpen = van.state(false);
 
+// ---------- persistence (localStorage) ----------
+
+const STORAGE_KEY = 'mgsCharacterCard:v1';
+
+function collectSerializable() {
+  return {
+    version: 1,
+    codename: codename.val,
+    clsPart: clsPart.val,
+    rolePart: rolePart.val,
+    genderPart: genderPart.val,
+    life: life.val,
+    psyche: psyche.val,
+    gmp: gmp.val,
+    profileImg: profileImg.val,
+    quote: quote.val,
+    skills: skills.map(s => s.val),
+    paramsList: paramsList.val.map(p => ({
+      icon: p.icon.val,
+      percent: p.percent.val,
+      special: p.special.val,
+      specialGrade: p.specialGrade.val,
+    })),
+  };
+}
+
+function loadSavedState() {
+  let raw;
+  try {
+    raw = localStorage.getItem(STORAGE_KEY);
+  } catch (err) {
+    // Some browsers throw just for accessing localStorage (e.g. certain
+    // private-browsing modes with storage disabled entirely).
+    console.warn('localStorage is unavailable; entries will not be remembered between visits:', err);
+    return;
+  }
+  if (!raw) return;
+
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (err) {
+    console.warn('Saved character card data was corrupted; starting fresh:', err);
+    return;
+  }
+  if (!data || typeof data !== 'object') return;
+
+  if (typeof data.codename === 'string') codename.val = data.codename;
+  if (typeof data.clsPart === 'string') clsPart.val = data.clsPart;
+  if (typeof data.rolePart === 'string') rolePart.val = data.rolePart;
+  if (typeof data.genderPart === 'string') genderPart.val = data.genderPart;
+  if (typeof data.life === 'number') life.val = clamp(Math.round(data.life), 0, 9999);
+  if (typeof data.psyche === 'number') psyche.val = clamp(Math.round(data.psyche), 0, 9999);
+  if (typeof data.gmp === 'number') gmp.val = clamp(Math.round(data.gmp), 0, 999999);
+  if (typeof data.profileImg === 'string') profileImg.val = data.profileImg;
+  if (typeof data.quote === 'string') quote.val = data.quote;
+
+  if (Array.isArray(data.skills)) {
+    data.skills.forEach((val, i) => {
+      if (skills[i] && typeof val === 'string') skills[i].val = val;
+    });
+  }
+
+  if (Array.isArray(data.paramsList) && data.paramsList.length > 0) {
+    paramsList.val = data.paramsList.map(p => makeParam(
+      typeof p.icon === 'string' ? p.icon : '\u2753',
+      clamp(Number(p.percent) || 0, 0, 100),
+      !!p.special,
+      typeof p.specialGrade === 'string' ? p.specialGrade : 'S',
+    ));
+  }
+}
+
+let saveTimer = null;
+function persistNow() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(collectSerializable()));
+  } catch (err) {
+    // Most commonly a QuotaExceededError - the profile photo is stored
+    // as a base64 data URL and can be large. We skip saving rather than
+    // interrupting the user with an error.
+    console.warn('Could not save character card to localStorage:', err);
+  }
+}
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(persistNow, 300);
+}
+
+// Restore any previously-saved entries before the card is first built,
+// so the initial render already reflects them.
+loadSavedState();
+
+// Auto-save whenever any persisted field changes. Reading every field
+// here (via collectSerializable) is what registers them all as this
+// derive's dependencies; the actual write happens after a short
+// debounce so rapid typing doesn't hit localStorage on every keystroke.
+// This has no DOM involvement at all, so it can't cause the
+// focus-loss/rebuild issues we ran into elsewhere in this file.
+van.derive(() => {
+  collectSerializable();
+  scheduleSave();
+});
+
 // ---------- card display ----------
 
 function StatBar(labelText, valueState) {
