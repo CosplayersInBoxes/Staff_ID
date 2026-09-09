@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MGS Peace Walker - Character Card</title>
+<style>
+  :root {
+    --bg-color: #b8b4a3;
+    --red: #d81e05;
+    --dark: #2b2b2b;
+    --orange: #e8791a;
+    --hatch: repeating-linear-gradient(
+      45deg,
+      #3a3a3a,
+      #3a3a3a 4px,
+      #b8b4a3 4px,
+      #b8b4a3 10px
+    );
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Courier New', Courier, monospace;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .card {
+    width: 1280px;
+    aspect-ratio: 2560 / 1436;
+    position: relative;
+    background-color: var(--bg-color);
+    /* PLACEHOLDER: replace url() below with your background image */
+    background-image: url('background.png');
+    background-size: cover;
+    background-position: center;
+    color: #1c1c1c;
+    overflow: hidden;
+    letter-spacing: 1px;
+  }
+
+  .grid {
+    position: absolute;
+    inset: 0;
+    padding: 3.5% 3% 2% 2%;
+    display: grid;
+    grid-template-columns: 26% 1fr;
+    grid-template-rows: auto auto 1fr;
+    column-gap: 2%;
+    row-gap: 1.5%;
+  }
+
+  /* ---------- PORTRAIT ---------- */
+  .portrait-col {
+    grid-row: 1 / 3;
+    position: relative;
+    display: flex;
+    align-items: stretch;
+  }
+
+  .portrait {
+    width: 100%;
+    position: relative;
+    background-color: #444;
+    /* PLACEHOLDER: replace url() below with your profile picture */
+    background-image: url('profile.png');
+    background-size: cover;
+    background-position: center top;
+    filter: grayscale(100%) contrast(1.1);
+  }
+
+  .arrow {
+    position: absolute;
+    left: 8px;
+    font-size: 2vw;
+    color: #c94a3d;
+    font-weight: bold;
+  }
+  .arrow.up { top: 6px; }
+  .arrow.down { bottom: 6px; }
+
+  /* ---------- HEADER / NAME ---------- */
+  .header-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0.3em;
+  }
+
+  .codename {
+    font-size: 2.6em;
+    font-weight: bold;
+    letter-spacing: 3px;
+    margin: 0;
+  }
+
+  .subtitle {
+    font-size: 1.3em;
+    margin: 0;
+  }
+
+  /* ---------- STATS (LIFE/PSYCHE + GMP) ---------- */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5%;
+    align-items: stretch;
+  }
+
+  .stat-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat-bar {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    background: var(--dark);
+  }
+
+  .stat-label {
+    background: var(--red);
+    color: #fff;
+    font-weight: bold;
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 2px;
+  }
+
+  .stat-value {
+    color: #fff;
+    font-size: 1.3em;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 20px;
+  }
+
+  .gmp-box {
+    background: var(--dark);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 4px 16px;
+  }
+
+  .gmp-label {
+    font-size: 0.9em;
+    letter-spacing: 2px;
+  }
+
+  .gmp-value {
+    font-size: 2.2em;
+    font-weight: bold;
+    line-height: 1;
+  }
+
+  /* ---------- PARAMETERS + SICKNESSES ROW ---------- */
+  .params-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4em;
+  }
+
+  .section-title {
+    font-size: 1.15em;
+    font-weight: bold;
+    color: #444;
+    letter-spacing: 2px;
+  }
+
+  .params-row {
+    display: grid;
+    grid-template-columns: repeat(11, 1fr) 1fr;
+    gap: 4px;
+    height: 190px;
+  }
+
+  .param-cell {
+    background: var(--dark);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    color: #fff;
+    font-weight: bold;
+    font-size: 1.2em;
+  }
+
+  /* fill level = colored bar from bottom; set with inline style --fill (0-100) and --grade-color */
+  .param-fill {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: var(--red);
+  }
+
+  .param-icon {
+    position: relative;
+    z-index: 1;
+    font-size: 1.6em;
+    margin-bottom: 6px;
+  }
+
+  .param-grade {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 6px;
+  }
+
+  .param-cell.special .param-fill { background: var(--orange); }
+
+  /* ---------- SICKNESSES PANEL ---------- */
+  .sick-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4em;
+  }
+
+  .sick-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    height: 190px;
+  }
+
+  .sick-cell {
+    background: var(--hatch);
+    border: 1px solid #555;
+  }
+
+  /* ---------- BOTTOM: SKILLS + QUOTE ---------- */
+  .bottom-section {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    min-height: 0;
+  }
+
+  .skills-title {
+    font-size: 1.3em;
+    font-weight: bold;
+    color: #555;
+    letter-spacing: 2px;
+  }
+
+  .skills-box {
+    background: rgba(58,58,58,0.92);
+    color: #fff;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .skills-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 2px solid #777;
+  }
+
+  .skill-slot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    border-right: 2px solid #777;
+    border-bottom: 1px solid #555;
+    font-size: 1.15em;
+    min-height: 48px;
+  }
+  .skill-slot:nth-child(2n) { border-right: none; }
+
+  .skill-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #ccc;
+    flex-shrink: 0;
+  }
+
+  .quote-box {
+    flex: 1;
+    padding: 20px 24px;
+    font-size: 1.25em;
+    line-height: 1.5;
+    overflow: auto;
+  }
+
+  /* editable text hint */
+  [contenteditable="true"] {
+    outline: 1px dashed transparent;
+  }
+  [contenteditable="true"]:hover {
+    outline: 1px dashed rgba(0,0,0,0.3);
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="grid">
+
+    <!-- PORTRAIT -->
+    <div class="portrait-col">
+      <div class="arrow up">&#8593;</div>
+      <div class="portrait"></div>
+      <div class="arrow down">&#8595;</div>
+    </div>
+
+    <!-- HEADER -->
+    <div class="header-col">
+      <div class="codename" contenteditable="true">CODENAME</div>
+      <div class="subtitle" contenteditable="true">Class / Role / Gender</div>
+
+      <div class="stats-row">
+        <div class="stat-bars">
+          <div class="stat-bar">
+            <div class="stat-label">LIFE</div>
+            <div class="stat-value" contenteditable="true">0000</div>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-label">PSYCHE</div>
+            <div class="stat-value" contenteditable="true">0000</div>
+          </div>
+        </div>
+        <div class="gmp-box">
+          <div class="gmp-label">GMP+</div>
+          <div class="gmp-value" contenteditable="true">0000</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARAMETERS + SICKNESSES -->
+    <div class="params-section">
+      <div class="section-title">&lt;PARAMETERS&gt;</div>
+      <div class="params-row">
+        <!-- Repeat this cell structure for each parameter icon.
+             Set style="--fill:60%" to control fill height,
+             change the emoji/icon and the grade letter (S/A/B/C/D/E). -->
+        <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#9876;&#65039;</span><span class="param-grade">C</span></div>
+        <div class="param-cell"><div class="param-fill" style="height:35%"></div><span class="param-icon">&#128295;</span><span class="param-grade">C</span></div>
+        <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#128137;</span><span class="param-grade">C</span></div>
+        <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#129517;</span><span class="param-grade">C</span></div>
+        <div class="param-cell"><div class="param-fill" style="height:15%"></div><span class="param-icon">&#128142;</span><span class="param-grade">C</span></div>
+        <div class="param-cell"><div class="param-fill" style="height:55%"></div><span class="param-icon">&#128299;</span><span class="param-grade">B</span></div>
+        <div class="param-cell"><div class="param-fill" style="height:10%"></div><span class="param-icon">&#129485;</span><span class="param-grade">D</span></div>
+        <div class="param-cell"><div class="param-fill" style="height:10%"></div><span class="param-icon">&#9749;</span><span class="param-grade">D</span></div>
+        <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#128105;</span><span class="param-grade">C</span></div>
+        <div class="param-cell"><div class="param-fill" style="height:100%"></div><span class="param-icon">&#129508;</span><span class="param-grade">B</span></div>
+        <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#128295;</span><span class="param-grade">C</span></div>
+        <div class="param-cell"><div class="param-fill" style="height:10%"></div><span class="param-icon">&#129388;</span><span class="param-grade">D</span></div>
+        <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#129508;</span><span class="param-grade">C</span></div>
+        <div class="param-cell special"><div class="param-fill" style="height:100%"></div><span class="param-icon">&#128170;</span><span class="param-grade">&#171;&#171;</span></div>
+      </div>
+    </div>
+
+    <div class="sick-panel">
+      <div class="section-title">&lt;SICKNESSES&gt;</div>
+      <div class="sick-row">
+        <!-- hatched = no sickness. Remove .sick-cell's background/add an icon to indicate an active sickness -->
+        <div class="sick-cell"></div>
+        <div class="sick-cell"></div>
+        <div class="sick-cell"></div>
+        <div class="sick-cell"></div>
+      </div>
+    </div>
+
+    <!-- SKILLS + QUOTE -->
+    <div class="bottom-section">
+      <div class="skills-title">&lt;SKILLS&gt;</div>
+      <div class="skills-box">
+        <div class="skills-list">
+          <div class="skill-slot"><span class="skill-icon"></span><span contenteditable="true">Skill Name</span></div>
+          <div class="skill-slot"><span contenteditable="true"></span></div>
+          <div class="skill-slot"><span contenteditable="true"></span></div>
+          <div class="skill-slot"><span contenteditable="true"></span></div>
+        </div>
+        <div class="quote-box" contenteditable="true">
+          Enter the character's quote or bio text here.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
