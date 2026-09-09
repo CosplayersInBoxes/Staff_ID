@@ -346,6 +346,27 @@
   .hamburger-btn:hover { border-color: var(--orange); }
   .hamburger-btn:hover span { background: var(--orange); }
 
+  .download-btn {
+    position: fixed;
+    top: 24px;
+    right: 88px;
+    z-index: 1000;
+    width: 52px;
+    height: 52px;
+    background: var(--dark);
+    border: 2px solid var(--red);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1.5em;
+    line-height: 1;
+  }
+  .download-btn:hover { border-color: var(--orange); color: var(--orange); }
+  .download-btn:disabled { opacity: 0.5; cursor: default; }
+
   .editor-overlay {
     position: fixed;
     inset: 0;
@@ -540,6 +561,7 @@
 <div id="app"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script type="module">
 import van from 'https://cdn.jsdelivr.net/gh/vanjs-org/van/public/van-1.6.0.min.js';
 
@@ -835,24 +857,93 @@ function Dialog() {
   return dialogEl;
 }
 
+// ---------- PNG export ----------
+
+function safeFileName(name) {
+  const cleaned = String(name || '').trim().replace(/[^a-z0-9_\- ]+/gi, '').trim().replace(/\s+/g, '_');
+  return cleaned || 'card';
+}
+
+async function downloadCardPng(triggerBtn) {
+  const cardEl = document.querySelector('.card');
+  if (!cardEl || typeof html2canvas !== 'function') {
+    console.error('html2canvas not available or .card not found');
+    return;
+  }
+  if (triggerBtn) triggerBtn.disabled = true;
+  try {
+    const canvas = await html2canvas(cardEl, {
+      backgroundColor: null,
+      scale: 2,
+      useCORS: true,
+    });
+    const dataUrl = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `${safeFileName(codename.val)}.png`;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (err) {
+    console.error('Failed to export card as PNG:', err);
+  } finally {
+    if (triggerBtn) triggerBtn.disabled = false;
+  }
+}
+
+function DownloadButton() {
+  const btn = button({
+    class: 'download-btn',
+    'aria-label': 'Download card as PNG',
+    title: 'Download card as PNG',
+    onclick: (e) => downloadCardPng(e.currentTarget),
+  }, '\u2913');
+  return btn;
+}
+
 function EditorUI() {
+  // Build the overlay + dialog exactly once. Toggling `dialogOpen`
+  // must never recreate these nodes - Dialog() reads many fields'
+  // .val synchronously while building the form (to set each input's
+  // initial value), so if it were rebuilt inside a reactive binding
+  // that also depends on those fields, every keystroke in any field
+  // would tear down and rebuild the whole dialog, killing focus.
+  // Instead we mount it once and only flip a `display` style, which
+  // is a leaf-level binding depending on dialogOpen alone.
+  const modalWrap = div(
+    {
+      class: 'editor-modal-wrap',
+      style: () => dialogOpen.val ? '' : 'display:none;',
+    },
+    div({ class: 'editor-overlay', onclick: () => { dialogOpen.val = false; } }),
+    Dialog(),
+  );
+
   return div({},
     button({
       class: 'hamburger-btn',
       'aria-label': 'Edit card',
       onclick: () => { dialogOpen.val = true; },
     }, span({}), span({}), span({})),
-    () => dialogOpen.val ? div({},
-      div({ class: 'editor-overlay', onclick: () => { dialogOpen.val = false; } }),
-      Dialog(),
-    ) : '',
+    DownloadButton(),
+    modalWrap,
   );
 }
 
 // ---------- mount ----------
+// NOTE: Card() and EditorUI() are mounted as plain (already-built) DOM
+// nodes, not as `() => Card()` / `() => EditorUI()` reactive wrappers.
+// Both functions already do their fine-grained reactive binding
+// internally (every dynamic bit is a nested `() => state.val` child or
+// prop, which VanJS binds in isolation). Wrapping the whole call in a
+// function here would instead make VanJS treat *every* van.state read
+// anywhere during that single build as a dependency of the entire
+// returned subtree - so e.g. typing into the codename field would
+// destroy and recreate the whole editor dialog (and any focused
+// input inside it) on every keystroke.
 const app = document.getElementById('app');
-van.add(app, () => Card());
-van.add(app, () => EditorUI());
+van.add(app, Card());
+van.add(app, EditorUI());
 </script>
 
 </body>
