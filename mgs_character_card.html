@@ -553,7 +553,38 @@
     margin-bottom: 6px;
   }
 
-  /* editable-text hover hint retained for card preview only (non-functional now) */
+  /* ---------- INLINE EDITABLE FIELDS (card contenteditable) ---------- */
+  .editable-text {
+    outline: none;
+    cursor: text;
+    border-radius: 2px;
+    padding: 0 2px;
+    margin: 0 -2px;
+  }
+  .editable-text:hover {
+    box-shadow: 0 0 0 2px rgba(216, 30, 5, 0.4);
+    background: rgba(216, 30, 5, 0.08);
+  }
+  .editable-text:focus {
+    box-shadow: 0 0 0 2px var(--orange);
+    background: rgba(232, 121, 26, 0.12);
+  }
+  .editable-text:empty::before {
+    content: attr(data-placeholder);
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  /* light-on-dark fields (skills, quote) get a lighter hover/focus tint */
+  .skills-box .editable-text:hover,
+  .quote-box.editable-text:hover {
+    box-shadow: 0 0 0 2px rgba(232, 121, 26, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .skills-box .editable-text:focus,
+  .quote-box.editable-text:focus {
+    box-shadow: 0 0 0 2px var(--orange);
+    background: rgba(255, 255, 255, 0.12);
+  }
 </style>
 </head>
 <body>
@@ -662,8 +693,14 @@ function Card() {
       ),
 
       div({ class: 'header-col' },
-        div({ class: 'codename' }, () => codename.val),
-        div({ class: 'subtitle' }, () => `${clsPart.val} / ${rolePart.val} / ${genderPart.val}`),
+        div({ class: 'codename' }, editableInline(span, codename)),
+        div({ class: 'subtitle' },
+          editableInline(span, clsPart),
+          ' / ',
+          editableInline(span, rolePart),
+          ' / ',
+          editableInline(span, genderPart),
+        ),
         div({ class: 'stats-row' },
           div({ class: 'stat-bars' },
             StatBar('LIFE', life),
@@ -694,9 +731,10 @@ function Card() {
         div({ class: 'skills-title' }, '<SKILLS>'),
         div({ class: 'skills-box' },
           div({ class: 'skills-list' },
-            ...skills.map(s => div({ class: 'skill-slot' }, span({}, () => s.val))),
+            ...skills.map((s, i) => div({ class: 'skill-slot' },
+              editableInline(span, s, { placeholder: `Skill ${i + 1}` }))),
           ),
-          div({ class: 'quote-box' }, () => quote.val),
+          editableMultiline(div, quote, { extraClass: 'quote-box' }),
         ),
       ),
     ),
@@ -717,14 +755,95 @@ function numberInput(state, min, max) {
       state.val = v;
     },
   });
+  // Reflect changes made elsewhere (e.g. directly on the card via
+  // contenteditable) - but only while this field isn't focused, so we
+  // never fight the user mid-keystroke or reset the caret.
+  van.derive(() => {
+    const v = state.val;
+    if (document.activeElement !== el && Number(el.value) !== v) el.value = v;
+  });
   return el;
 }
 
 function textInput(state, placeholder) {
-  return input({
+  const el = input({
     type: 'text', value: state.val, placeholder: placeholder || '',
     oninput: e => { state.val = e.target.value; },
   });
+  van.derive(() => {
+    const v = state.val;
+    if (document.activeElement !== el && el.value !== v) el.value = v;
+  });
+  return el;
+}
+
+// ---------- inline contenteditable fields (direct editing on the card) ----------
+
+function pastePlainText(e) {
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+  // execCommand is deprecated but remains the simplest cross-browser
+  // way to insert plain text into a contenteditable at the caret
+  // without pulling in a rich-text editing library.
+  document.execCommand('insertText', false, text);
+}
+
+// Single-line editable field (codename, class/role/gender, skills):
+// Enter confirms/blurs rather than inserting a line break, and pasted
+// content is flattened to plain text on one line.
+function editableInline(tagFn, state, opts = {}) {
+  const { extraClass = '', placeholder = '' } = opts;
+  const el = tagFn({
+    class: `editable-text ${extraClass}`.trim(),
+    contenteditable: 'true',
+    spellcheck: 'false',
+    'data-placeholder': placeholder,
+    oninput: e => { state.val = e.currentTarget.textContent; },
+    onkeydown: e => {
+      if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+    },
+    onpaste: e => {
+      pastePlainText(e);
+      // insertText fires its own input event, but normalize afterwards
+      // in case a newline slipped through (e.g. via IME/other paths).
+      setTimeout(() => {
+        const flat = el.textContent.replace(/[\r\n]+/g, ' ');
+        if (flat !== el.textContent) el.textContent = flat;
+        state.val = el.textContent;
+      }, 0);
+    },
+  }, state.val);
+
+  // Sync in external changes (from the sidebar dialog, or any other
+  // consumer of this state) - but skip while this element has focus,
+  // so we never overwrite text the user is actively typing and reset
+  // their caret position.
+  van.derive(() => {
+    const v = state.val;
+    if (document.activeElement !== el && el.textContent !== v) el.textContent = v;
+  });
+
+  return el;
+}
+
+// Multi-line editable field (quote/bio): Enter is allowed to insert a
+// real line break, matching the textarea in the sidebar dialog.
+function editableMultiline(tagFn, state, opts = {}) {
+  const { extraClass = '' } = opts;
+  const el = tagFn({
+    class: `editable-text ${extraClass}`.trim(),
+    contenteditable: 'true',
+    spellcheck: 'false',
+    oninput: e => { state.val = e.currentTarget.innerText; },
+    onpaste: pastePlainText,
+  }, state.val);
+
+  van.derive(() => {
+    const v = state.val;
+    if (document.activeElement !== el && el.innerText !== v) el.innerText = v;
+  });
+
+  return el;
 }
 
 function ParamEditRow(p, index) {
