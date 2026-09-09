@@ -644,20 +644,26 @@ const skills = [
 ];
 
 const paramsList = van.state([
-  makeParam('⚔️', 20),
-  makeParam('🔧', 35),
-  makeParam('💉', 20),
-  makeParam('🥋', 20),
-  makeParam('💮', 15),
-  makeParam('🛟', 55),
-  makeParam('🥍', 10),
-  makeParam('☕', 10),
-  makeParam('👩', 20),
-  makeParam('🪤', 100),
-  makeParam('🔧', 20),
-  makeParam('🦄', 10),
-  makeParam('🪤', 20),
-  makeParam('💪', 100, true, '⇈'),
+  makeParam('⚔️', 20), // Combat
+  makeParam('🔧', 35), // R&D
+  makeParam('🍴', 20), // Mess Hall
+  makeParam('💊', 20), // Medical
+  makeParam('📊', 15), // Intel
+  makeParam('🎯', 55), // Shoot
+  makeParam('🔄', 10), // Reload
+  makeParam('💣', 10), // Throw
+  makeParam('🪤', 20), // Place
+  makeParam('🚶', 100), // Walk
+  makeParam('🏃', 20), // Run
+  makeParam('✊', 10), // Fight
+  makeParam('🛡️', 20), // Defense
+  makeParam('🙌', 100, true, '⇈'), // Morale
+  // 👮🏻‍♂️ brig (bars)
+  // 🤒 sick (x-eyes)
+  // 🤕 wounded (no idea)
+  // 😵‍💫 PTSD (tear?)
+  // ⬇️ Weakened (down arrow)
+  // 🏴 OUTER OPS (flag)
 ]);
 
 const dialogOpen = van.state(false);
