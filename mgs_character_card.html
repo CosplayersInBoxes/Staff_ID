@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MGS Peace Walker - Character Card</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.css">
 <style>
   :root {
     --bg-color: #b8b4a3;
@@ -27,14 +29,15 @@
     display: flex;
     justify-content: center;
     padding: 20px;
+    min-height: 100vh;
   }
 
   .card {
     width: 1280px;
+    max-width: 100%;
     aspect-ratio: 2560 / 1436;
     position: relative;
     background-color: var(--bg-color);
-    /* PLACEHOLDER: replace url() below with your background image */
     background-image: url('background.png');
     background-size: cover;
     background-position: center;
@@ -66,7 +69,6 @@
     width: 100%;
     position: relative;
     background-color: #444;
-    /* PLACEHOLDER: replace url() below with your profile picture */
     background-image: url('profile.png');
     background-size: cover;
     background-position: center top;
@@ -129,6 +131,7 @@
     position: absolute;
     left: 0; top: 0; bottom: 0;
     background: var(--red);
+    transition: width 0.2s ease;
   }
 
   .stat-label {
@@ -186,6 +189,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.4em;
+    min-width: 0;
   }
 
   .section-title {
@@ -201,6 +205,7 @@
     flex-wrap: nowrap;
     gap: 4px;
     height: 80px;
+    overflow-x: auto;
   }
 
   .param-cell {
@@ -213,13 +218,15 @@
     color: #fff;
     font-weight: bold;
     font-size: 1.2em;
+    min-width: 2.4em;
+    flex: 1 0 auto;
   }
 
-  /* fill level = colored bar from bottom; set with inline style --fill (0-100) and --grade-color */
   .param-fill {
     position: absolute;
     left: 0; right: 0; bottom: 0;
     background: var(--red);
+    transition: height 0.2s ease;
   }
 
   .param-icon {
@@ -307,109 +314,546 @@
     font-size: 1.25em;
     line-height: 1.5;
     overflow: auto;
+    white-space: pre-wrap;
   }
 
-  /* editable text hint */
-  [contenteditable="true"] {
-    outline: 1px dashed transparent;
+  /* ================= EDITOR UI ================= */
+
+  .hamburger-btn {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 1000;
+    width: 52px;
+    height: 52px;
+    background: var(--dark);
+    border: 2px solid var(--red);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    cursor: pointer;
+    font-family: inherit;
   }
-  [contenteditable="true"]:hover {
-    outline: 1px dashed rgba(0,0,0,0.3);
+  .hamburger-btn span {
+    display: block;
+    width: 26px;
+    height: 3px;
+    background: #fff;
   }
+  .hamburger-btn:hover { border-color: var(--orange); }
+  .hamburger-btn:hover span { background: var(--orange); }
+
+  .editor-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 1001;
+  }
+
+  .editor-dialog {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 420px;
+    max-width: 92vw;
+    background: #1c1c1c;
+    color: #eee;
+    font-family: 'Courier New', Courier, monospace;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    z-index: 1002;
+    border-left: 3px solid var(--red);
+  }
+
+  .editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--dark);
+    border-bottom: 2px solid var(--red);
+  }
+
+  .editor-header h2 {
+    margin: 0;
+    font-size: 1.1em;
+    letter-spacing: 3px;
+    color: #fff;
+  }
+
+  .editor-close {
+    background: none;
+    border: 1px solid #777;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 1em;
+    line-height: 1;
+  }
+  .editor-close:hover { border-color: var(--orange); color: var(--orange); }
+
+  .editor-body {
+    overflow-y: auto;
+    padding: 18px 20px 40px;
+    flex: 1;
+  }
+
+  .editor-section {
+    margin-bottom: 24px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 18px;
+  }
+
+  .editor-section h3 {
+    margin: 0 0 10px;
+    font-size: 0.85em;
+    letter-spacing: 2px;
+    color: var(--orange);
+  }
+
+  .field {
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .field label {
+    font-size: 0.75em;
+    letter-spacing: 1px;
+    color: #999;
+  }
+
+  .field input[type="text"],
+  .field input[type="number"],
+  .field textarea {
+    background: #2b2b2b;
+    border: 1px solid #555;
+    color: #fff;
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 0.95em;
+  }
+  .field input:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--orange);
+  }
+
+  .field textarea {
+    resize: vertical;
+    min-height: 70px;
+  }
+
+  .subtitle-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .subtitle-row input { flex: 1; min-width: 0; }
+  .subtitle-row .slash { color: #777; font-weight: bold; }
+
+  .param-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    background: #262626;
+    padding: 6px;
+    border: 1px solid #3a3a3a;
+  }
+  .param-edit-row input[type="text"] {
+    width: 44px;
+    text-align: center;
+    padding: 4px;
+  }
+  .param-edit-row input[type="number"] {
+    width: 56px;
+    padding: 4px;
+  }
+  .param-edit-row .grade-preview {
+    width: 26px;
+    text-align: center;
+    font-weight: bold;
+    color: var(--orange);
+  }
+  .param-edit-row label.special-lbl {
+    font-size: 0.65em;
+    color: #999;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .param-edit-row .remove-param {
+    background: none;
+    border: 1px solid #772222;
+    color: #d88;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    line-height: 1;
+    margin-left: auto;
+  }
+  .param-edit-row .remove-param:hover { border-color: var(--red); color: var(--red); }
+
+  .add-param-btn {
+    background: var(--dark);
+    border: 1px dashed #666;
+    color: #ccc;
+    padding: 8px;
+    width: 100%;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 1px;
+  }
+  .add-param-btn:hover { border-color: var(--orange); color: var(--orange); }
+
+  #profile-dropzone.dropzone {
+    border: 2px dashed #666;
+    background: #262626;
+    min-height: 120px;
+    padding: 10px;
+  }
+  #profile-dropzone.dropzone .dz-message {
+    color: #999;
+    font-size: 0.9em;
+    margin: 2em 0;
+  }
+  #profile-dropzone.dropzone:hover { border-color: var(--orange); }
+
+  .current-photo-hint {
+    font-size: 0.75em;
+    color: #999;
+    margin-bottom: 6px;
+  }
+
+  /* editable-text hover hint retained for card preview only (non-functional now) */
 </style>
 </head>
 <body>
 
-<div class="card">
-  <div class="grid">
+<div id="app"></div>
 
-    <!-- PORTRAIT -->
-    <div class="portrait-col">
-      <div class="arrow up">&#8593;</div>
-      <div class="portrait"></div>
-      <div class="arrow down">&#8595;</div>
-    </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.js"></script>
+<script type="module">
+import van from 'https://cdn.jsdelivr.net/gh/vanjs-org/van/public/van-1.6.0.min.js';
 
-    <!-- HEADER -->
-    <div class="header-col">
-      <div class="codename" contenteditable="true">CODENAME</div>
-      <div class="subtitle" contenteditable="true">Class / Role / Gender</div>
+Dropzone.autoDiscover = false;
 
-      <div class="stats-row">
-        <div class="stat-bars">
-          <div class="stat-bar">
-            <div class="stat-fill" style="width:20%"></div>
-            <div class="stat-label">LIFE</div>
-            <div class="stat-value" contenteditable="true">0000</div>
-          </div>
-          <div class="stat-bar">
-            <div class="stat-fill" style="width:80%"></div>
-            <div class="stat-label">PSYCHE</div>
-            <div class="stat-value" contenteditable="true">0000</div>
-          </div>
-        </div>
-        <div class="gmp-box">
-          <div class="gmp-label">GMP+</div>
-          <div class="gmp-value" contenteditable="true">0000</div>
-        </div>
-      </div>
-    </div>
+const { div, span, button, input, textarea, h2, h3 } = van.tags;
 
-    <!-- PARAMETERS + SICKNESSES -->
-    <div class="params-and-sick">
-    <div class="params-section">
-      <div class="section-title">&lt;PARAMETERS&gt;</div>
-      <div class="params-row">
-        <!-- Repeat this cell structure for each parameter icon.
-             Set style="--fill:60%" to control fill height,
-             change the emoji/icon and the grade letter (S/A/B/C/D/E). -->
-        <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#9876;&#65039;</span><span class="param-grade">C</span></div>
-        <div class="param-cell"><div class="param-fill" style="height:35%"></div><span class="param-icon">&#128295;</span><span class="param-grade">C</span></div>
-        <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#128137;</span><span class="param-grade">C</span></div>
-        <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#129517;</span><span class="param-grade">C</span></div>
-        <div class="param-cell"><div class="param-fill" style="height:15%"></div><span class="param-icon">&#128142;</span><span class="param-grade">C</span></div>
-        <div class="param-cell"><div class="param-fill" style="height:55%"></div><span class="param-icon">&#128299;</span><span class="param-grade">B</span></div>
-        <div class="param-cell"><div class="param-fill" style="height:10%"></div><span class="param-icon">&#129485;</span><span class="param-grade">D</span></div>
-        <div class="param-cell"><div class="param-fill" style="height:10%"></div><span class="param-icon">&#9749;</span><span class="param-grade">D</span></div>
-        <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#128105;</span><span class="param-grade">C</span></div>
-        <div class="param-cell"><div class="param-fill" style="height:100%"></div><span class="param-icon">&#129508;</span><span class="param-grade">B</span></div>
-        <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#128295;</span><span class="param-grade">C</span></div>
-        <div class="param-cell"><div class="param-fill" style="height:10%"></div><span class="param-icon">&#129388;</span><span class="param-grade">D</span></div>
-        <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#129508;</span><span class="param-grade">C</span></div>
-        <div class="param-cell special"><div class="param-fill" style="height:100%"></div><span class="param-icon">&#128170;</span><span class="param-grade">⇈</span></div>
-      </div>
-    </div>
+// ---------- helpers ----------
+function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
 
-    <div class="sick-panel">
-      <div class="section-title">&lt;SICKNESSES&gt;</div>
-      <div class="sick-row">
-        <!-- hatched = no sickness. Remove .sick-cell's background/add an icon to indicate an active sickness -->
-        <div class="sick-cell"></div>
-        <div class="sick-cell"></div>
-        <div class="sick-cell"></div>
-        <div class="sick-cell"></div>
-      </div>
-    </div>
-    </div>
+function gradeFor(pct) {
+  pct = Number(pct) || 0;
+  if (pct >= 90) return 'S';
+  if (pct >= 75) return 'A';
+  if (pct >= 55) return 'B';
+  if (pct >= 30) return 'C';
+  if (pct >= 10) return 'D';
+  return 'E';
+}
 
-    <!-- SKILLS + QUOTE -->
-    <div class="bottom-section">
-      <div class="skills-title">&lt;SKILLS&gt;</div>
-      <div class="skills-box">
-        <div class="skills-list">
-          <div class="skill-slot"><span contenteditable="true">⭐ Skill Name</span></div>
-          <div class="skill-slot"><span contenteditable="true"></span></div>
-          <div class="skill-slot"><span contenteditable="true"></span></div>
-          <div class="skill-slot"><span contenteditable="true"></span></div>
-        </div>
-        <div class="quote-box" contenteditable="true">
-          Enter the character's quote or bio text here.
-        </div>
-      </div>
-    </div>
+function fourDigit(n) {
+  n = clamp(Math.round(Number(n) || 0), 0, 9999);
+  return String(n).padStart(4, '0');
+}
 
-  </div>
-</div>
+function makeParam(icon, percent, special, specialGrade) {
+  return {
+    icon: van.state(icon),
+    percent: van.state(percent),
+    special: van.state(!!special),
+    specialGrade: van.state(specialGrade || 'S'),
+  };
+}
+
+// ---------- state ----------
+const codename = van.state('CODENAME');
+const clsPart = van.state('Class');
+const rolePart = van.state('Role');
+const genderPart = van.state('Gender');
+
+const life = van.state(6100);
+const psyche = van.state(8300);
+const gmp = van.state(1500);
+
+const profileImg = van.state(null);
+
+const quote = van.state("Enter the character's quote or bio text here.");
+const skills = [
+  van.state('⭐ Skill Name'),
+  van.state(''),
+  van.state(''),
+  van.state(''),
+];
+
+const paramsList = van.state([
+  makeParam('⚔️', 20),
+  makeParam('🔧', 35),
+  makeParam('💉', 20),
+  makeParam('🥋', 20),
+  makeParam('💮', 15),
+  makeParam('🛟', 55),
+  makeParam('🥍', 10),
+  makeParam('☕', 10),
+  makeParam('👩', 20),
+  makeParam('🪤', 100),
+  makeParam('🔧', 20),
+  makeParam('🦄', 10),
+  makeParam('🪤', 20),
+  makeParam('💪', 100, true, '⇈'),
+]);
+
+const dialogOpen = van.state(false);
+
+// ---------- card display ----------
+
+function StatBar(labelText, valueState) {
+  return div({ class: 'stat-bar' },
+    div({ class: 'stat-fill', style: () => `width:${clamp(valueState.val / 9999 * 100, 0, 100)}%` }),
+    div({ class: 'stat-label' }, labelText),
+    div({ class: 'stat-value' }, () => fourDigit(valueState.val)),
+  );
+}
+
+function ParamCell(p) {
+  return div({ class: () => 'param-cell' + (p.special.val ? ' special' : '') },
+    div({ class: 'param-fill', style: () => `height:${clamp(Number(p.percent.val) || 0, 0, 100)}%` }),
+    span({ class: 'param-icon' }, () => p.icon.val),
+    span({ class: 'param-grade' }, () => p.special.val ? p.specialGrade.val : gradeFor(p.percent.val)),
+  );
+}
+
+function Card() {
+  return div({ class: 'card' },
+    div({ class: 'grid' },
+
+      div({ class: 'portrait-col' },
+        div({ class: 'arrow up' }, '\u2191'),
+        div({ class: 'portrait', style: () => profileImg.val ? `background-image:url(${profileImg.val})` : '' }),
+        div({ class: 'arrow down' }, '\u2193'),
+      ),
+
+      div({ class: 'header-col' },
+        div({ class: 'codename' }, () => codename.val),
+        div({ class: 'subtitle' }, () => `${clsPart.val} / ${rolePart.val} / ${genderPart.val}`),
+        div({ class: 'stats-row' },
+          div({ class: 'stat-bars' },
+            StatBar('LIFE', life),
+            StatBar('PSYCHE', psyche),
+          ),
+          div({ class: 'gmp-box' },
+            div({ class: 'gmp-label' }, 'GMP+'),
+            div({ class: 'gmp-value' }, () => gmp.val),
+          ),
+        ),
+      ),
+
+      div({ class: 'params-and-sick' },
+        div({ class: 'params-section' },
+          div({ class: 'section-title' }, '<PARAMETERS>'),
+          div({ class: 'params-row' }, () => paramsList.val.map(p => ParamCell(p))),
+        ),
+        div({ class: 'sick-panel' },
+          div({ class: 'section-title' }, '<SICKNESSES>'),
+          div({ class: 'sick-row' },
+            div({ class: 'sick-cell' }), div({ class: 'sick-cell' }),
+            div({ class: 'sick-cell' }), div({ class: 'sick-cell' }),
+          ),
+        ),
+      ),
+
+      div({ class: 'bottom-section' },
+        div({ class: 'skills-title' }, '<SKILLS>'),
+        div({ class: 'skills-box' },
+          div({ class: 'skills-list' },
+            ...skills.map(s => div({ class: 'skill-slot' }, span({}, () => s.val))),
+          ),
+          div({ class: 'quote-box' }, () => quote.val),
+        ),
+      ),
+    ),
+  );
+}
+
+// ---------- editor dialog ----------
+
+function Field(labelText, el) {
+  return div({ class: 'field' }, div({}, labelText), el);
+}
+
+function numberInput(state, min, max) {
+  const el = input({
+    type: 'number', min, max, value: state.val,
+    oninput: e => {
+      const v = clamp(parseInt(e.target.value, 10) || 0, min, max);
+      state.val = v;
+    },
+  });
+  return el;
+}
+
+function textInput(state, placeholder) {
+  return input({
+    type: 'text', value: state.val, placeholder: placeholder || '',
+    oninput: e => { state.val = e.target.value; },
+  });
+}
+
+function ParamEditRow(p, index) {
+  return div({ class: 'param-edit-row' },
+    input({
+      type: 'text', value: p.icon.val, maxlength: 4,
+      oninput: e => { p.icon.val = e.target.value; },
+    }),
+    input({
+      type: 'number', min: 0, max: 100, value: p.percent.val,
+      oninput: e => { p.percent.val = clamp(parseInt(e.target.value, 10) || 0, 0, 100); },
+    }),
+    span({ class: 'grade-preview' }, () => p.special.val ? '' : gradeFor(p.percent.val)),
+    div({ style: 'display:flex;flex-direction:column;gap:2px;' },
+      label({ class: 'special-lbl' },
+        input({
+          type: 'checkbox', checked: p.special.val,
+          onchange: e => { p.special.val = e.target.checked; },
+        }),
+        'special',
+      ),
+      () => p.special.val ? input({
+        type: 'text', value: p.specialGrade.val, maxlength: 3,
+        style: 'width:36px;padding:2px;',
+        oninput: e => { p.specialGrade.val = e.target.value; },
+      }) : '',
+    ),
+    button({
+      class: 'remove-param',
+      onclick: () => {
+        paramsList.val = paramsList.val.filter((_, i) => i !== index);
+      },
+    }, '\u2715'),
+  );
+}
+
+// need "label" tag
+const { label } = van.tags;
+
+function setupDropzone(container) {
+  const dz = new Dropzone(container, {
+    url: '#',
+    autoProcessQueue: false,
+    maxFiles: 1,
+    acceptedFiles: 'image/*',
+    addRemoveLinks: true,
+    dictDefaultMessage: 'Drop a profile photo here or click to upload',
+  });
+  dz.on('addedfile', file => {
+    if (dz.files.length > 1) {
+      dz.removeFile(dz.files[0]);
+    }
+    const reader = new FileReader();
+    reader.onload = e => { profileImg.val = e.target.result; };
+    reader.readAsDataURL(file);
+  });
+  dz.on('removedfile', () => {
+    if (dz.files.length === 0) profileImg.val = null;
+  });
+  return dz;
+}
+
+function Dialog() {
+  const dzContainer = div({ id: 'profile-dropzone', class: 'dropzone' });
+
+  const dialogEl = div({ class: 'editor-dialog' },
+    div({ class: 'editor-header' },
+      h2({}, 'EDIT CARD'),
+      button({ class: 'editor-close', onclick: () => { dialogOpen.val = false; } }, '\u2715'),
+    ),
+    div({ class: 'editor-body' },
+
+      div({ class: 'editor-section' },
+        h3({}, 'IDENTITY'),
+        Field('Codename', textInput(codename)),
+        div({ class: 'field' },
+          div({}, 'Class / Role / Gender'),
+          div({ class: 'subtitle-row' },
+            textInput(clsPart),
+            span({ class: 'slash' }, '/'),
+            textInput(rolePart),
+            span({ class: 'slash' }, '/'),
+            textInput(genderPart),
+          ),
+        ),
+      ),
+
+      div({ class: 'editor-section' },
+        h3({}, 'PHOTO'),
+        div({ class: 'current-photo-hint' }, 'Upload a profile photo (used as the portrait image).'),
+        dzContainer,
+      ),
+
+      div({ class: 'editor-section' },
+        h3({}, 'STATS'),
+        Field('Life (0-9999)', numberInput(life, 0, 9999)),
+        Field('Psyche (0-9999)', numberInput(psyche, 0, 9999)),
+        Field('GMP+', numberInput(gmp, 0, 999999)),
+      ),
+
+      div({ class: 'editor-section' },
+        h3({}, 'PARAMETERS'),
+        div({}, () => paramsList.val.map((p, i) => ParamEditRow(p, i))),
+        button({
+          class: 'add-param-btn',
+          onclick: () => { paramsList.val = [...paramsList.val, makeParam('\u2753', 50)]; },
+        }, '+ ADD PARAMETER'),
+      ),
+
+      div({ class: 'editor-section' },
+        h3({}, 'SKILLS'),
+        ...skills.map((s, i) => Field(`Skill ${i + 1}`, textInput(s))),
+      ),
+
+      div({ class: 'editor-section', style: 'border-bottom:none;margin-bottom:0;' },
+        h3({}, 'QUOTE / BIO'),
+        textarea({
+          value: quote.val,
+          oninput: e => { quote.val = e.target.value; },
+        }),
+      ),
+    ),
+  );
+
+  // Attach dropzone after the element tree exists.
+  setTimeout(() => setupDropzone(dzContainer), 0);
+
+  return dialogEl;
+}
+
+function EditorUI() {
+  return div({},
+    button({
+      class: 'hamburger-btn',
+      'aria-label': 'Edit card',
+      onclick: () => { dialogOpen.val = true; },
+    }, span({}), span({}), span({})),
+    () => dialogOpen.val ? div({},
+      div({ class: 'editor-overlay', onclick: () => { dialogOpen.val = false; } }),
+      Dialog(),
+    ) : '',
+  );
+}
+
+// ---------- mount ----------
+const app = document.getElementById('app');
+van.add(app, () => Card());
+van.add(app, () => EditorUI());
+</script>
 
 </body>
 </html>
