@@ -848,7 +848,7 @@ function editableMultiline(tagFn, state, opts = {}) {
   return el;
 }
 
-function ParamEditRow(p, index) {
+function ParamEditRow(p, onRemove) {
   return div({ class: 'param-edit-row' },
     input({
       type: 'text', value: p.icon.val, maxlength: 4,
@@ -875,10 +875,50 @@ function ParamEditRow(p, index) {
     ),
     button({
       class: 'remove-param',
-      onclick: () => {
-        paramsList.val = paramsList.val.filter((_, i) => i !== index);
-      },
+      onclick: onRemove,
     }, '\u2715'),
+  );
+}
+
+// Builds and owns the list of parameter-editor rows imperatively
+// (plain DOM add/remove on explicit user actions) instead of via a
+// van reactive binding keyed on paramsList.val. A reactive binding
+// here would re-run - rebuilding EVERY row's DOM node from scratch -
+// on ANY field change in ANY row, because ParamEditRow() reads each
+// row's icon/percent/special .val synchronously to set initial input
+// values; those reads would get captured as dependencies of the same
+// binding that maps over the whole list. That's exactly why typing a
+// second digit into a parameter box required refocusing: the row
+// (and its focused input) was being destroyed and recreated after
+// every keystroke. Building rows once and only touching the DOM on
+// add/remove avoids that entirely - normal typing never touches this
+// container.
+function ParamsEditorSection() {
+  const rowsContainer = div({ style: 'display:contents' });
+  const rowElByParam = new Map();
+
+  function addRow(p) {
+    const rowEl = ParamEditRow(p, () => {
+      paramsList.val = paramsList.val.filter(item => item !== p);
+      const el = rowElByParam.get(p);
+      if (el) { el.remove(); rowElByParam.delete(p); }
+    });
+    rowElByParam.set(p, rowEl);
+    van.add(rowsContainer, rowEl);
+  }
+
+  paramsList.val.forEach(addRow);
+
+  return div({},
+    rowsContainer,
+    button({
+      class: 'add-param-btn',
+      onclick: () => {
+        const p = makeParam('\u2753', 50);
+        paramsList.val = [...paramsList.val, p];
+        addRow(p);
+      },
+    }, '+ ADD PARAMETER'),
   );
 }
 
@@ -948,11 +988,7 @@ function Dialog() {
 
       div({ class: 'editor-section' },
         h3({}, 'PARAMETERS'),
-        div({}, () => div({ style: 'display:contents' }, ...paramsList.val.map((p, i) => ParamEditRow(p, i)))),
-        button({
-          class: 'add-param-btn',
-          onclick: () => { paramsList.val = [...paramsList.val, makeParam('\u2753', 50)]; },
-        }, '+ ADD PARAMETER'),
+        ParamsEditorSection(),
       ),
 
       div({ class: 'editor-section' },
