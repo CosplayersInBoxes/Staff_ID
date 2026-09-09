@@ -659,7 +659,7 @@ function Card() {
       div({ class: 'params-and-sick' },
         div({ class: 'params-section' },
           div({ class: 'section-title' }, '<PARAMETERS>'),
-          div({ class: 'params-row' }, () => paramsList.val.map(p => ParamCell(p))),
+          div({ class: 'params-row' }, () => div({ style: 'display:contents' }, ...paramsList.val.map(p => ParamCell(p)))),
         ),
         div({ class: 'sick-panel' },
           div({ class: 'section-title' }, '<SICKNESSES>'),
@@ -807,7 +807,7 @@ function Dialog() {
 
       div({ class: 'editor-section' },
         h3({}, 'PARAMETERS'),
-        div({}, () => paramsList.val.map((p, i) => ParamEditRow(p, i))),
+        div({}, () => div({ style: 'display:contents' }, ...paramsList.val.map((p, i) => ParamEditRow(p, i)))),
         button({
           class: 'add-param-btn',
           onclick: () => { paramsList.val = [...paramsList.val, makeParam('\u2753', 50)]; },
