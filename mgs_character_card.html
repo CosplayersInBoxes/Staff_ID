@@ -105,26 +105,34 @@
 
   /* ---------- STATS (LIFE/PSYCHE + GMP) ---------- */
   .stats-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 1.5%;
+    display: flex;
+    gap: 0.2em;
     align-items: stretch;
   }
 
   .stat-bars {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    justify-content: space-between;
+    gap: 0.2em;
   }
 
   .stat-bar {
     display: grid;
-    grid-template-columns: 130px 1fr;
+    position: relative;
+    grid-template-columns: 215px 1fr;
     background: var(--dark);
+    flex-grow: 1;
+  }
+
+  .stat-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: var(--red);
   }
 
   .stat-label {
-    background: var(--red);
+    z-index: 1;
     color: #fff;
     font-weight: bold;
     font-size: 1.1em;
@@ -135,6 +143,7 @@
   }
 
   .stat-value {
+    z-index: 1;
     color: #fff;
     font-size: 1.3em;
     font-weight: bold;
@@ -152,6 +161,7 @@
     align-items: flex-end;
     justify-content: center;
     padding: 4px 16px;
+    padding-left: 5em;
   }
 
   .gmp-label {
@@ -166,6 +176,12 @@
   }
 
   /* ---------- PARAMETERS + SICKNESSES ROW ---------- */
+  .params-and-sick {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1em;
+  }
+
   .params-section {
     display: flex;
     flex-direction: column;
@@ -180,10 +196,11 @@
   }
 
   .params-row {
-    display: grid;
-    grid-template-columns: repeat(11, 1fr) 1fr;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     gap: 4px;
-    height: 190px;
+    height: 80px;
   }
 
   .param-cell {
@@ -228,15 +245,17 @@
   }
 
   .sick-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     gap: 4px;
-    height: 190px;
+    height: 80px;
   }
 
   .sick-cell {
     background: var(--hatch);
     border: 1px solid #555;
+    width: 2.2em;
   }
 
   /* ---------- BOTTOM: SKILLS + QUOTE ---------- */
@@ -282,14 +301,6 @@
   }
   .skill-slot:nth-child(2n) { border-right: none; }
 
-  .skill-icon {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: #ccc;
-    flex-shrink: 0;
-  }
-
   .quote-box {
     flex: 1;
     padding: 20px 24px;
@@ -327,10 +338,12 @@
       <div class="stats-row">
         <div class="stat-bars">
           <div class="stat-bar">
+            <div class="stat-fill" style="width:20%"></div>
             <div class="stat-label">LIFE</div>
             <div class="stat-value" contenteditable="true">0000</div>
           </div>
           <div class="stat-bar">
+            <div class="stat-fill" style="width:80%"></div>
             <div class="stat-label">PSYCHE</div>
             <div class="stat-value" contenteditable="true">0000</div>
           </div>
@@ -343,6 +356,7 @@
     </div>
 
     <!-- PARAMETERS + SICKNESSES -->
+    <div class="params-and-sick">
     <div class="params-section">
       <div class="section-title">&lt;PARAMETERS&gt;</div>
       <div class="params-row">
@@ -362,7 +376,7 @@
         <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#128295;</span><span class="param-grade">C</span></div>
         <div class="param-cell"><div class="param-fill" style="height:10%"></div><span class="param-icon">&#129388;</span><span class="param-grade">D</span></div>
         <div class="param-cell"><div class="param-fill" style="height:20%"></div><span class="param-icon">&#129508;</span><span class="param-grade">C</span></div>
-        <div class="param-cell special"><div class="param-fill" style="height:100%"></div><span class="param-icon">&#128170;</span><span class="param-grade">&#171;&#171;</span></div>
+        <div class="param-cell special"><div class="param-fill" style="height:100%"></div><span class="param-icon">&#128170;</span><span class="param-grade">⇈</span></div>
       </div>
     </div>
 
@@ -376,13 +390,14 @@
         <div class="sick-cell"></div>
       </div>
     </div>
+    </div>
 
     <!-- SKILLS + QUOTE -->
     <div class="bottom-section">
       <div class="skills-title">&lt;SKILLS&gt;</div>
       <div class="skills-box">
         <div class="skills-list">
-          <div class="skill-slot"><span class="skill-icon"></span><span contenteditable="true">Skill Name</span></div>
+          <div class="skill-slot"><span contenteditable="true">⭐ Skill Name</span></div>
           <div class="skill-slot"><span contenteditable="true"></span></div>
           <div class="skill-slot"><span contenteditable="true"></span></div>
           <div class="skill-slot"><span contenteditable="true"></span></div>
