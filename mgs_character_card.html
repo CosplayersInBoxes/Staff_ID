@@ -32,13 +32,21 @@
     min-height: 100vh;
   }
 
-  .card {
+  .paper {
     width: 1280px;
     max-width: 100%;
     aspect-ratio: 2560 / 1436;
     position: relative;
     background-color: var(--bg-color);
-    background-image: url('overlay.png'), url('Paper.svg');
+    background-image: url('Paper.svg');
+    background-size: 100% 100%, cover;
+  }
+
+  .card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-image: url('overlay.png');
     background-size: contain;
     background-position: right, center;
     background-repeat: no-repeat, no-repeat;
@@ -857,7 +865,7 @@ function ParamCell(p) {
 }
 
 function Card() {
-  return div({ class: 'card' },
+  return div({ class: 'paper' }, div({ class: 'card' },
     div({ class: 'grid' },
 
       div({ class: 'portrait-col' },
@@ -921,7 +929,7 @@ function Card() {
         ),
       ),
     ),
-  );
+  ));
 }
 
 // ---------- editor dialog ----------
