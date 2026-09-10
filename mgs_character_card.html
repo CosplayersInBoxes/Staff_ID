@@ -516,6 +516,25 @@
     padding: 6px;
     border: 1px solid #3a3a3a;
   }
+  .param-edit-row.dragging {
+    opacity: 0.4;
+  }
+  .param-drag-handle {
+    cursor: grab;
+    color: #777;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+    user-select: none;
+  }
+  .param-drag-handle:active { cursor: grabbing; }
+  .param-lock-icon {
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+    opacity: 0.55;
+    font-size: 0.8em;
+  }
   .param-edit-row input[type="text"] {
     width: 44px;
     text-align: center;
@@ -643,12 +662,16 @@ function fourDigit(n) {
   return String(n).padStart(4, '0');
 }
 
-function makeParam(icon, percent, special, specialGrade) {
+function makeParam(icon, percent, special, specialGrade, locked) {
   return {
     icon: van.state(icon),
     percent: van.state(percent),
     special: van.state(!!special),
     specialGrade: van.state(specialGrade || 'S'),
+    // Plain (non-reactive) flag: whether this parameter's position in
+    // the list is fixed. It's fixed per-param for its whole lifetime,
+    // never toggled at runtime, so it doesn't need to be a van.state.
+    locked: !!locked,
   };
 }
 
@@ -665,11 +688,11 @@ const DEFAULT_SKILLS = ['⭐ Skill Name', '', '', ''];
 
 function createDefaultParams() {
   return [
-    makeParam('⚔️', 20), // Combat
-    makeParam('🔧', 35), // R&D
-    makeParam('🍴', 20), // Mess Hall
-    makeParam('💊', 20), // Medical
-    makeParam('📊', 15), // Intel
+    makeParam('⚔️', 20, false, 'S', true), // Combat - locked
+    makeParam('🔧', 35, false, 'S', true), // R&D - locked
+    makeParam('🍴', 20, false, 'S', true), // Mess Hall - locked
+    makeParam('💊', 20, false, 'S', true), // Medical - locked
+    makeParam('📊', 15, false, 'S', true), // Intel - locked
     makeParam('🎯', 55), // Shoot
     makeParam('🔄', 10), // Reload
     makeParam('💣', 10), // Throw
@@ -730,6 +753,7 @@ function collectSerializable() {
       percent: p.percent.val,
       special: p.special.val,
       specialGrade: p.specialGrade.val,
+      locked: p.locked,
     })),
   };
 }
@@ -777,6 +801,7 @@ function loadSavedState() {
       clamp(Number(p.percent) || 0, 0, 100),
       !!p.special,
       typeof p.specialGrade === 'string' ? p.specialGrade : 'S',
+      !!p.locked,
     ));
   }
 }
@@ -1003,8 +1028,31 @@ function editableMultiline(tagFn, state, opts = {}) {
   return el;
 }
 
+// Tracks the parameter currently being dragged, for the duration of a
+// single drag gesture. Kept in module scope rather than dataTransfer
+// since this is a same-page, same-list drag - no need to serialize it.
+let draggedParam = null;
+
 function ParamEditRow(p, onRemove) {
-  return div({ class: 'param-edit-row' },
+  const row = div({ class: 'param-edit-row' + (p.locked ? ' locked-param' : '') },
+    p.locked
+      ? span({ class: 'param-lock-icon', title: "This parameter's position is fixed" }, '\u{1F512}')
+      : span({
+          class: 'param-drag-handle',
+          title: 'Drag to reorder',
+          draggable: 'true',
+          ondragstart: e => {
+            draggedParam = p;
+            row.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            // Firefox requires setData to be called for drag to start.
+            e.dataTransfer.setData('text/plain', '');
+          },
+          ondragend: () => {
+            draggedParam = null;
+            row.classList.remove('dragging');
+          },
+        }, '\u283f'),
     input({
       type: 'text', value: p.icon.val, maxlength: 4,
       oninput: e => { p.icon.val = e.target.value; },
@@ -1033,6 +1081,52 @@ function ParamEditRow(p, onRemove) {
       onclick: onRemove,
     }, '\u2715'),
   );
+
+  // Locked rows accept no drops at all - with no ondragover handler,
+  // the browser shows its native "not allowed" cursor automatically
+  // and no 'drop' event can fire here, so a dragged parameter simply
+  // can't be placed at (or displace) a locked row's position.
+  if (!p.locked) {
+    row.ondragover = e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    };
+    row.ondrop = e => {
+      e.preventDefault();
+      if (draggedParam && draggedParam !== p) reorderParams(draggedParam, p);
+    };
+  }
+
+  return row;
+}
+
+// Reorders paramsList so `dragged` ends up where `target` was, WITHOUT
+// ever changing the array index of any locked parameter. Locked
+// parameters keep their exact original position; only the unlocked
+// ones are reshuffled among the remaining (unlocked) slots.
+function reorderParams(dragged, target) {
+  if (!dragged || !target || dragged === target || dragged.locked || target.locked) return;
+
+  const current = paramsList.val;
+  const unlocked = current.filter(p => !p.locked);
+
+  const fromIdx = unlocked.indexOf(dragged);
+  if (fromIdx === -1) return;
+  unlocked.splice(fromIdx, 1);
+
+  const toIdx = unlocked.indexOf(target);
+  unlocked.splice(toIdx === -1 ? unlocked.length : toIdx, 0, dragged);
+
+  let ui = 0;
+  const result = current.map(p => (p.locked ? p : unlocked[ui++]));
+
+  paramsList.val = result;
+  // The dialog's rows are managed imperatively (see ParamsEditorSection
+  // below), so an explicit resync is needed to reflect the new order -
+  // this is only ever called from a discrete user action (drag-drop),
+  // never reactively, so it can't reintroduce the per-keystroke
+  // rebuild issue that pattern caused elsewhere in this file.
+  if (resyncParamsEditor) resyncParamsEditor();
 }
 
 // Builds and owns the list of parameter-editor rows imperatively
