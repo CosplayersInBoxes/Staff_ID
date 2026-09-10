@@ -444,6 +444,22 @@
     gap: 4px;
   }
 
+  .danger-zone h3 { color: var(--red) !important; }
+  .reset-card-btn {
+    background: transparent;
+    border: 2px solid var(--red);
+    color: var(--red);
+    padding: 10px 16px;
+    font-family: inherit;
+    font-size: 0.9em;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+  .reset-card-btn:hover {
+    background: var(--red);
+    color: #fff;
+  }
+
   .field label {
     font-size: 0.75em;
     letter-spacing: 1px;
@@ -624,47 +640,56 @@ function makeParam(icon, percent, special, specialGrade) {
 }
 
 // ---------- state ----------
-const codename = van.state('CODENAME');
-const clsPart = van.state('Class');
-const rolePart = van.state('Role');
-const genderPart = van.state('Gender');
+const DEFAULT_CODENAME = 'CODENAME';
+const DEFAULT_CLASS = 'Class';
+const DEFAULT_ROLE = 'Role';
+const DEFAULT_GENDER = 'Gender';
+const DEFAULT_LIFE = 6100;
+const DEFAULT_PSYCHE = 8300;
+const DEFAULT_GMP = 1500;
+const DEFAULT_QUOTE = "Enter the character's quote or bio text here.";
+const DEFAULT_SKILLS = ['⭐ Skill Name', '', '', ''];
 
-const life = van.state(6100);
-const psyche = van.state(8300);
-const gmp = van.state(1500);
+function createDefaultParams() {
+  return [
+    makeParam('⚔️', 20), // Combat
+    makeParam('🔧', 35), // R&D
+    makeParam('🍴', 20), // Mess Hall
+    makeParam('💊', 20), // Medical
+    makeParam('📊', 15), // Intel
+    makeParam('🎯', 55), // Shoot
+    makeParam('🔄', 10), // Reload
+    makeParam('💣', 10), // Throw
+    makeParam('⛓', 20), // Place
+    makeParam('🚶', 100), // Walk
+    makeParam('🏃', 20), // Run
+    makeParam('✊', 10), // Fight
+    makeParam('🛡️', 20), // Defense
+    makeParam('🙌', 100, true, '⇈'), // Morale
+    // 👮🏻‍♂️ brig (bars)
+    // 🤒 sick (x-eyes)
+    // 🤕 wounded (no idea)
+    // 😵‍💫 PTSD (tear?)
+    // ⬇️ Weakened (down arrow)
+    // 🏴 OUTER OPS (flag)
+  ];
+}
+
+const codename = van.state(DEFAULT_CODENAME);
+const clsPart = van.state(DEFAULT_CLASS);
+const rolePart = van.state(DEFAULT_ROLE);
+const genderPart = van.state(DEFAULT_GENDER);
+
+const life = van.state(DEFAULT_LIFE);
+const psyche = van.state(DEFAULT_PSYCHE);
+const gmp = van.state(DEFAULT_GMP);
 
 const profileImg = van.state(null);
 
-const quote = van.state("Enter the character's quote or bio text here.");
-const skills = [
-  van.state('⭐ Skill Name'),
-  van.state(''),
-  van.state(''),
-  van.state(''),
-];
+const quote = van.state(DEFAULT_QUOTE);
+const skills = DEFAULT_SKILLS.map(v => van.state(v));
 
-const paramsList = van.state([
-  makeParam('⚔️', 20), // Combat
-  makeParam('🔧', 35), // R&D
-  makeParam('🍴', 20), // Mess Hall
-  makeParam('💊', 20), // Medical
-  makeParam('📊', 15), // Intel
-  makeParam('🎯', 55), // Shoot
-  makeParam('🔄', 10), // Reload
-  makeParam('💣', 10), // Throw
-  makeParam('⛓', 20), // Place
-  makeParam('🚶', 100), // Walk
-  makeParam('🏃', 20), // Run
-  makeParam('✊', 10), // Fight
-  makeParam('🛡️', 20), // Defense
-  makeParam('🙌', 100, true, '⇈'), // Morale
-  // 👮🏻‍♂️ brig (bars)
-  // 🤒 sick (x-eyes)
-  // 🤕 wounded (no idea)
-  // 😵‍💫 PTSD (tear?)
-  // ⬇️ Weakened (down arrow)
-  // 🏴 OUTER OPS (flag)
-]);
+const paramsList = van.state(createDefaultParams());
 
 const dialogOpen = van.state(false);
 
@@ -997,6 +1022,8 @@ function ParamEditRow(p, onRemove) {
 // every keystroke. Building rows once and only touching the DOM on
 // add/remove avoids that entirely - normal typing never touches this
 // container.
+let resyncParamsEditor = null;
+
 function ParamsEditorSection() {
   const rowsContainer = div({ style: 'display:contents' });
   const rowElByParam = new Map();
@@ -1011,7 +1038,19 @@ function ParamsEditorSection() {
     van.add(rowsContainer, rowEl);
   }
 
-  paramsList.val.forEach(addRow);
+  function rebuildAll() {
+    rowElByParam.forEach(el => el.remove());
+    rowElByParam.clear();
+    paramsList.val.forEach(addRow);
+  }
+
+  rebuildAll();
+  // Exposed so resetCard() can refresh these rows after replacing
+  // paramsList.val wholesale. This is only ever called from an
+  // explicit user action (the Reset button), never reactively, so it
+  // can't reintroduce the per-keystroke rebuild bug this section was
+  // rewritten to avoid.
+  resyncParamsEditor = rebuildAll;
 
   return div({},
     rowsContainer,
@@ -1028,6 +1067,8 @@ function ParamsEditorSection() {
 
 // need "label" tag
 const { label } = van.tags;
+
+let dropzoneInstance = null;
 
 function setupDropzone(container) {
   const dz = new Dropzone(container, {
@@ -1049,7 +1090,42 @@ function setupDropzone(container) {
   dz.on('removedfile', () => {
     if (dz.files.length === 0) profileImg.val = null;
   });
+  dropzoneInstance = dz;
   return dz;
+}
+
+// ---------- reset ----------
+
+function resetCard() {
+  const confirmed = window.confirm(
+    'Reset this card to its default template? This clears every field, including your saved data, and cannot be undone.'
+  );
+  if (!confirmed) return;
+
+  codename.val = DEFAULT_CODENAME;
+  clsPart.val = DEFAULT_CLASS;
+  rolePart.val = DEFAULT_ROLE;
+  genderPart.val = DEFAULT_GENDER;
+  life.val = DEFAULT_LIFE;
+  psyche.val = DEFAULT_PSYCHE;
+  gmp.val = DEFAULT_GMP;
+  quote.val = DEFAULT_QUOTE;
+  DEFAULT_SKILLS.forEach((v, i) => { if (skills[i]) skills[i].val = v; });
+
+  // Replace the parameter list wholesale (restores the original count
+  // even if rows were added/removed), then explicitly refresh the
+  // dialog's imperatively-managed rows to match - they don't watch
+  // paramsList reactively (see ParamsEditorSection), so without this
+  // they'd keep showing the old, now-orphaned parameter objects.
+  paramsList.val = createDefaultParams();
+  if (resyncParamsEditor) resyncParamsEditor();
+
+  profileImg.val = null;
+  if (dropzoneInstance) {
+    try { dropzoneInstance.removeAllFiles(true); } catch (err) { /* no files to remove */ }
+  }
+
+  try { localStorage.removeItem(STORAGE_KEY); } catch (err) { /* ignore */ }
 }
 
 function Dialog() {
@@ -1100,12 +1176,18 @@ function Dialog() {
         ...skills.map((s, i) => Field(`Skill ${i + 1}`, textInput(s))),
       ),
 
-      div({ class: 'editor-section', style: 'border-bottom:none;margin-bottom:0;' },
+      div({ class: 'editor-section' },
         h3({}, 'QUOTE / BIO'),
         textarea({
           value: quote.val,
           oninput: e => { quote.val = e.target.value; },
         }),
+      ),
+
+      div({ class: 'editor-section danger-zone', style: 'border-bottom:none;margin-bottom:0;' },
+        h3({}, 'DANGER ZONE'),
+        div({ class: 'current-photo-hint' }, 'Resets every field above back to the default template. This cannot be undone.'),
+        button({ class: 'reset-card-btn', onclick: resetCard }, 'RESET CARD'),
       ),
     ),
   );
