@@ -75,6 +75,12 @@
     filter: grayscale(100%) contrast(1.1);
   }
 
+  .portrait.drag-over {
+    outline: 3px dashed var(--orange);
+    outline-offset: -6px;
+    filter: grayscale(60%) contrast(1.1) brightness(1.1);
+  }
+
   .arrow {
     position: absolute;
     left: 8px;
@@ -685,6 +691,7 @@ const psyche = van.state(DEFAULT_PSYCHE);
 const gmp = van.state(DEFAULT_GMP);
 
 const profileImg = van.state(null);
+const dragOverPortrait = van.state(false);
 
 const quote = van.state(DEFAULT_QUOTE);
 const skills = DEFAULT_SKILLS.map(v => van.state(v));
@@ -820,7 +827,18 @@ function Card() {
     div({ class: 'grid' },
 
       div({ class: 'portrait-col' },
-        div({ class: 'portrait', style: () => profileImg.val ? `background-image:url(${profileImg.val})` : '' }),
+        div({
+          class: () => 'portrait' + (dragOverPortrait.val ? ' drag-over' : ''),
+          style: () => profileImg.val ? `background-image:url(${profileImg.val})` : '',
+          ondragover: e => { e.preventDefault(); dragOverPortrait.val = true; },
+          ondragleave: () => { dragOverPortrait.val = false; },
+          ondrop: e => {
+            e.preventDefault();
+            dragOverPortrait.val = false;
+            const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+            loadImageFile(file);
+          },
+        }),
       ),
 
       div({ class: 'header-col' },
@@ -1070,6 +1088,23 @@ const { label } = van.tags;
 
 let dropzoneInstance = null;
 
+// Shared by the sidebar dropzone widget and drag-and-drop directly
+// onto the card's portrait. Routing through dropzoneInstance.addFile
+// (when it's available) keeps both UIs in sync - the editor dialog's
+// thumbnail preview will show whatever was dropped on the card, and
+// vice versa. Falls back to a plain FileReader for the brief window
+// before the dropzone widget has initialized.
+function loadImageFile(file) {
+  if (!file || !file.type || !file.type.startsWith('image/')) return;
+  if (dropzoneInstance) {
+    dropzoneInstance.addFile(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => { profileImg.val = e.target.result; };
+    reader.readAsDataURL(file);
+  }
+}
+
 function setupDropzone(container) {
   const dz = new Dropzone(container, {
     url: '#',
@@ -1185,7 +1220,7 @@ function Dialog() {
       ),
 
       div({ class: 'editor-section danger-zone', style: 'border-bottom:none;margin-bottom:0;' },
-        h3({}, 'DANGER ZONE'),
+        h3({}, 'GAME OVER'),
         div({ class: 'current-photo-hint' }, 'Resets every field above back to the default template. This cannot be undone.'),
         button({ class: 'reset-card-btn', onclick: resetCard }, 'RESET CARD'),
       ),
