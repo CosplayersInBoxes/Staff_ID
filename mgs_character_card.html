@@ -256,6 +256,10 @@
     z-index: 1;
     font-size: 1.6em;
     margin-bottom: 6px;
+    /* Card icons are emoji glyphs, which render in full color by
+       default regardless of the surrounding muted palette - force
+       them to black & white to match. */
+    filter: grayscale(100%);
   }
 
   .param-grade {
@@ -326,6 +330,13 @@
     padding: 10px 20px;
     font-size: 1.15em;
     min-height: 48px;
+  }
+
+  /* Skill text can include emoji (e.g. the default '⭐ Skill Name') -
+     keep those black & white on the card too, matching the param
+     icons above. */
+  .skill-slot .editable-text {
+    filter: grayscale(100%);
   }
 
   .quote-box {
@@ -1407,9 +1418,12 @@ function safeFileName(name) {
 }
 
 async function downloadCardPng(triggerBtn) {
-  const cardEl = document.querySelector('.card');
+  // .paper is the outer element (background texture + sizing); .card
+  // is nested inside it. Capture .paper so the exported image
+  // includes everything, with a fallback for older markup.
+  const cardEl = document.querySelector('.paper') || document.querySelector('.card');
   if (!cardEl || typeof html2canvas !== 'function') {
-    console.error('html2canvas not available or .card not found');
+    console.error('html2canvas not available or .paper/.card not found');
     return;
   }
   if (triggerBtn) triggerBtn.disabled = true;
@@ -1419,6 +1433,21 @@ async function downloadCardPng(triggerBtn) {
       scale: 2,
       useCORS: true,
     });
+
+    // The exported photo is always fully grayscale, independent of
+    // however the live card is currently colored/filtered - this
+    // post-processes actual pixel data, so it's reliable regardless
+    // of which CSS filters html2canvas did or didn't reproduce.
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      // Perceptual (luminance-weighted) grayscale conversion.
+      const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      d[i] = d[i + 1] = d[i + 2] = gray;
+    }
+    ctx.putImageData(imgData, 0, 0);
+
     const dataUrl = canvas.toDataURL('image/png');
     const link = document.createElement('a');
     link.download = `${safeFileName(codename.val)}.png`;
