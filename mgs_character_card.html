@@ -1034,7 +1034,7 @@ const skills = DEFAULT_SKILLS.map(v => van.state(v));
 const paramsList = van.state(createDefaultParams());
 
 const dialogOpen = van.state(false);
-const pixelIconMode = van.state(false);
+const pixelIconMode = van.state(true);
 
 // ---------- persistence (localStorage) ----------
 
@@ -1618,7 +1618,7 @@ function resetCard() {
   // they'd keep showing the old, now-orphaned parameter objects.
   paramsList.val = createDefaultParams();
   if (resyncParamsEditor) resyncParamsEditor();
-  pixelIconMode.val = false;
+  pixelIconMode.val = true;
 
   clearProfileImage();
   if (dropzoneInstance) {
