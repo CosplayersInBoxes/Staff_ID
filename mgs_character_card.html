@@ -726,12 +726,12 @@ function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
 
 function gradeFor(pct) {
   pct = Number(pct) || 0;
-  if (pct >= 90) return 'S';
-  if (pct >= 75) return 'A';
-  if (pct >= 55) return 'B';
-  if (pct >= 30) return 'C';
-  if (pct >= 10) return 'D';
-  if (pct >= 1) return 'E';
+  if (pct >= 83.33) return 'S';
+  if (pct >= 66.66) return 'A';
+  if (pct >= 50) return 'B';
+  if (pct >= 33.33) return 'C';
+  if (pct >= 16.66) return 'D';
+  if (pct > 0) return 'E';
   return '-';
 }
 
