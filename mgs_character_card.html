@@ -11,13 +11,6 @@
     --red: #d81e05;
     --dark: #2b2b2b;
     --orange: #e8791a;
-    --hatch: repeating-linear-gradient(
-      45deg,
-      #3a3a3a,
-      #3a3a3a 4px,
-      #b8b4a3 4px,
-      #b8b4a3 10px
-    );
   }
 
   * { box-sizing: border-box; }
@@ -307,7 +300,18 @@
   }
 
   .sick-cell {
-    background: var(--hatch);
+    /* Written as a literal gradient rather than background: var(--hatch)
+       - html2canvas doesn't reliably resolve CSS custom properties used
+       inside background/gradient values, so the hatch pattern was
+       rendering blank (just the flat --bg-color) in exported PNGs even
+       though it displayed fine live in the browser. */
+    background: repeating-linear-gradient(
+      45deg,
+      #3a3a3a,
+      #3a3a3a 4px,
+      #b8b4a3 4px,
+      #b8b4a3 10px
+    );
     border: 1px solid #555;
     width: 2.2em;
   }
