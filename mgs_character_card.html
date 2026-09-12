@@ -695,6 +695,17 @@
     opacity: 0.4;
     pointer-events: none;
   }
+  /* Applied only for the instant of a PNG export (see downloadCardPng):
+     hides a skill-name's own text AND its empty-state placeholder
+     (::before) without shifting layout, so blank or still-default
+     skill slots don't show "Skill Name 1" / "Skill 2" placeholder
+     text baked into the exported image. */
+  .skill-name-text.export-hide-text {
+    visibility: hidden !important;
+  }
+  .skill-name-text.export-hide-text::before {
+    content: none !important;
+  }
   /* light-on-dark fields (skills, quote) get a lighter hover/focus tint */
   .skills-box .editable-text:hover,
   .quote-box.editable-text:hover {
@@ -1496,7 +1507,7 @@ function Card() {
           div({ class: 'skills-list' },
             ...skills.map((s, i) => div({ class: 'skill-slot' },
               SkillIcon(s),
-              editableInline(span, s.name, { placeholder: `Skill ${i + 1}` }))),
+              editableInline(span, s.name, { extraClass: 'skill-name-text', placeholder: `Skill ${i + 1}` }))),
           ),
           editableMultiline(div, quote, { extraClass: 'quote-box' }),
         ),
@@ -2034,6 +2045,24 @@ function safeFileName(name) {
   return cleaned || 'card';
 }
 
+// A skill slot is "untouched" for export purposes if its name is
+// either blank or still exactly the seeded default text (currently
+// only slot 1 ships with a non-empty default, "Skill Name 1", but
+// this checks every slot against its own DEFAULT_SKILLS entry so it
+// keeps working if that ever changes). Untouched slots' name text
+// (real text or the empty-state "Skill N" placeholder) gets hidden
+// only in the exported PNG - the live card keeps showing it so the
+// user still knows those slots are editable.
+function markUntouchedSkillsForExport(hide) {
+  const nameEls = document.querySelectorAll('.skill-name-text');
+  nameEls.forEach((el, i) => {
+    const current = skills[i] ? skills[i].name.val : '';
+    const defaultVal = DEFAULT_SKILLS[i] ? DEFAULT_SKILLS[i].name : '';
+    const untouched = current.trim() === '' || current === defaultVal;
+    el.classList.toggle('export-hide-text', hide && untouched);
+  });
+}
+
 async function downloadCardPng(triggerBtn) {
   const cardEl = document.querySelector('.paper');
   if (!cardEl || typeof html2canvas !== 'function') {
@@ -2041,6 +2070,7 @@ async function downloadCardPng(triggerBtn) {
     return;
   }
   if (triggerBtn) triggerBtn.disabled = true;
+  markUntouchedSkillsForExport(true);
   try {
     const canvas = await html2canvas(cardEl, {
       backgroundColor: null,
@@ -2057,6 +2087,7 @@ async function downloadCardPng(triggerBtn) {
   } catch (err) {
     console.error('Failed to export card as PNG:', err);
   } finally {
+    markUntouchedSkillsForExport(false);
     if (triggerBtn) triggerBtn.disabled = false;
   }
 }
