@@ -338,6 +338,15 @@
     min-height: 48px;
   }
 
+  .skill-icon {
+    flex-shrink: 0;
+    min-width: 1.1em;
+    font-size: 1.3em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .quote-box {
     background: rgba(58,58,58,0.92);
     flex: 1;
@@ -588,6 +597,23 @@
   }
   .param-edit-row .remove-param:hover { border-color: var(--red); color: var(--red); }
 
+  .skill-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .skill-edit-row input[type="text"]:first-child {
+    width: 44px;
+    text-align: center;
+    padding: 4px;
+    flex-shrink: 0;
+  }
+  .skill-edit-row input[type="text"]:last-child {
+    flex: 1;
+    min-width: 0;
+  }
+
   .add-param-btn {
     background: var(--dark);
     border: 1px dashed #666;
@@ -682,7 +708,8 @@ function gradeFor(pct) {
   if (pct >= 55) return 'B';
   if (pct >= 30) return 'C';
   if (pct >= 10) return 'D';
-  return 'E';
+  if (pct >= 1) return 'E';
+  return '-';
 }
 
 function fourDigit(n) {
@@ -910,6 +937,20 @@ const PIXEL_ICONS = {
     '..#.....',
     '..#.....',
   ],
+  '\u2B50': [ // ⭐ default skill icon (custom uploaded artwork)
+    '....####....',
+    '..##....##..',
+    '.#...##...#.',
+    '.#...##...#.',
+    '############',
+    '#..######..#',
+    '#...####...#',
+    '#...####...#',
+    '.#.##..##.#.',
+    '.#.#....#.#.',
+    '..##....##..',
+    '....####....',
+  ],
 };
 
 // Builds an inline SVG from a pixel grid. Grids need not be square -
@@ -966,6 +1007,40 @@ function ParamIcon(p) {
   return container;
 }
 
+// Same idea as ParamIcon, but for skill icons: swaps between the raw
+// emoji/text icon and its pixel-art SVG equivalent (when one exists)
+// using the same pixelIconMode toggle. Unlike a parameter, a skill's
+// icon can legitimately be empty (no icon set), in which case nothing
+// is rendered at all rather than falling back to a placeholder glyph.
+function SkillIcon(s) {
+  const container = span({ class: 'skill-icon' });
+  van.derive(() => {
+    const iconVal = s.icon.val;
+    // Hide the icon entirely whenever the skill has no name text - an
+    // icon with nothing next to it reads as a stray leftover slot, in
+    // both the live preview and the exported PNG (which is just a
+    // screenshot of this same DOM). It reappears as soon as a name is
+    // typed back in.
+    const hasName = s.name.val.trim().length > 0;
+    const pattern = (hasName && pixelIconMode.val) ? PIXEL_ICONS[iconVal] : null;
+    container.innerHTML = '';
+    if (!hasName) return;
+    if (pattern) {
+      container.appendChild(buildPixelSVG(pattern));
+    } else if (iconVal) {
+      container.textContent = iconVal;
+    }
+  });
+  return container;
+}
+
+function makeSkill(icon, name) {
+  return {
+    icon: van.state(icon || ''),
+    name: van.state(name || ''),
+  };
+}
+
 function makeParam(icon, percent, special, specialGrade, locked) {
   return {
     icon: van.state(icon),
@@ -988,7 +1063,12 @@ const DEFAULT_LIFE = 6100;
 const DEFAULT_PSYCHE = 8300;
 const DEFAULT_GMP = 1500;
 const DEFAULT_QUOTE = "Enter the character's quote or bio text here.";
-const DEFAULT_SKILLS = ['⭐ Skill Name', '', '', ''];
+const DEFAULT_SKILLS = [
+  { icon: '⭐', name: 'Skill Name 1' },
+  { icon: '⭐', name: '' },
+  { icon: '⭐', name: '' },
+  { icon: '⭐', name: '' },
+];
 
 function createDefaultParams() {
   return [
@@ -1029,7 +1109,7 @@ const dragOverPortrait = van.state(false);
 const portraitHasTransparency = van.state(false);
 
 const quote = van.state(DEFAULT_QUOTE);
-const skills = DEFAULT_SKILLS.map(v => van.state(v));
+const skills = DEFAULT_SKILLS.map(v => makeSkill(v.icon, v.name));
 
 const paramsList = van.state(createDefaultParams());
 
@@ -1053,7 +1133,7 @@ function collectSerializable() {
     profileImg: profileImg.val,
     quote: quote.val,
     pixelIconMode: pixelIconMode.val,
-    skills: skills.map(s => s.val),
+    skills: skills.map(s => ({ icon: s.icon.val, name: s.name.val })),
     paramsList: paramsList.val.map(p => ({
       icon: p.icon.val,
       percent: p.percent.val,
@@ -1098,7 +1178,24 @@ function loadSavedState() {
 
   if (Array.isArray(data.skills)) {
     data.skills.forEach((val, i) => {
-      if (skills[i] && typeof val === 'string') skills[i].val = val;
+      if (!skills[i]) return;
+      if (val && typeof val === 'object') {
+        // Current format: separate icon + name fields.
+        if (typeof val.icon === 'string') skills[i].icon.val = val.icon;
+        if (typeof val.name === 'string') skills[i].name.val = val.name;
+      } else if (typeof val === 'string') {
+        // Back-compat: older saves stored one combined string (e.g.
+        // "⭐ Skill Name"). Best-effort split on the first space so
+        // existing saved cards migrate without losing data.
+        const spaceIdx = val.indexOf(' ');
+        if (spaceIdx === -1) {
+          skills[i].icon.val = '';
+          skills[i].name.val = val;
+        } else {
+          skills[i].icon.val = val.slice(0, spaceIdx);
+          skills[i].name.val = val.slice(spaceIdx + 1);
+        }
+      }
     });
   }
 
@@ -1221,7 +1318,8 @@ function Card() {
         div({ class: 'skills-box' },
           div({ class: 'skills-list' },
             ...skills.map((s, i) => div({ class: 'skill-slot' },
-              editableInline(span, s, { placeholder: `Skill ${i + 1}` }))),
+              SkillIcon(s),
+              editableInline(span, s.name, { placeholder: `Skill ${i + 1}` }))),
           ),
           editableMultiline(div, quote, { extraClass: 'quote-box' }),
         ),
@@ -1333,6 +1431,20 @@ function editableMultiline(tagFn, state, opts = {}) {
   });
 
   return el;
+}
+
+// Icon + name pair for one skill slot, in the sidebar editor - mirrors
+// the icon input on ParamEditRow below (same maxlength, same plain
+// text-or-emoji input) so picking a skill icon works identically to
+// picking a parameter icon. Reuses textInput() for both fields, which
+// already keeps them in sync with any external state change.
+function SkillEditRow(s, i) {
+  const iconInput = textInput(s.icon, '⭐');
+  iconInput.maxLength = 4;
+  iconInput.setAttribute('aria-label', `Skill ${i + 1} icon`);
+  const nameInput = textInput(s.name, `Skill ${i + 1}`);
+  nameInput.setAttribute('aria-label', `Skill ${i + 1} name`);
+  return div({ class: 'skill-edit-row' }, iconInput, nameInput);
 }
 
 // Tracks the parameter currently being dragged, for the duration of a
@@ -1609,7 +1721,11 @@ function resetCard() {
   psyche.val = DEFAULT_PSYCHE;
   gmp.val = DEFAULT_GMP;
   quote.val = DEFAULT_QUOTE;
-  DEFAULT_SKILLS.forEach((v, i) => { if (skills[i]) skills[i].val = v; });
+  DEFAULT_SKILLS.forEach((v, i) => {
+    if (!skills[i]) return;
+    skills[i].icon.val = v.icon;
+    skills[i].name.val = v.name;
+  });
 
   // Replace the parameter list wholesale (restores the original count
   // even if rows were added/removed), then explicitly refresh the
@@ -1692,7 +1808,8 @@ function Dialog() {
 
       div({ class: 'editor-section' },
         h3({}, 'SKILLS'),
-        ...skills.map((s, i) => Field(`Skill ${i + 1}`, textInput(s))),
+        div({ class: 'current-photo-hint' }, 'Icon uses the same pixel-art toggle as Parameters above.'),
+        ...skills.map((s, i) => Field(`Skill ${i + 1}`, SkillEditRow(s, i))),
       ),
 
       div({ class: 'editor-section' },
