@@ -272,6 +272,16 @@
     position: relative;
     z-index: 1;
     margin-bottom: 6px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    min-height: 1.3em;
+  }
+
+  .morale-rank-img {
+    display: block;
+    width: 1.3em;
+    height: auto;
   }
 
   .param-cell.special .param-fill { background: var(--orange); }
@@ -577,6 +587,14 @@
     text-align: center;
     font-weight: bold;
     color: var(--orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .param-edit-row .grade-preview-img {
+    display: block;
+    width: 20px;
+    height: auto;
   }
   .param-edit-row label.special-lbl {
     font-size: 0.65em;
@@ -696,7 +714,7 @@ import van from 'https://cdn.jsdelivr.net/gh/vanjs-org/van/public/van-1.6.0.min.
 
 Dropzone.autoDiscover = false;
 
-const { div, span, button, input, textarea, h2, h3 } = van.tags;
+const { div, span, button, input, textarea, h2, h3, img } = van.tags;
 
 // ---------- helpers ----------
 function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
@@ -952,6 +970,152 @@ const PIXEL_ICONS = {
     '....####....',
   ],
 };
+
+// ---------- Morale's percentage-dependent pixel art ----------
+// Morale (icon '🙌') doesn't use a single static pixel-art icon like
+// other parameters. Instead, in pixel-art mode, it shows one of five
+// chevron drawings depending on the current percentage - a visual
+// "mood" readout rather than a fixed glyph. MORALE_ICON_EMOJI is the
+// emoji that triggers this behavior in ParamIcon below.
+const MORALE_ICON_EMOJI = '🙌';
+
+const MORALE_PIXEL_ICONS = {
+  up3: [ // 80-100%: triple chevron up (custom uploaded artwork)
+    '...........##...........',
+    '..........####..........',
+    '.........######.........',
+    '........########........',
+    '.......##########.......',
+    '......############......',
+    '.....######..######.....',
+    '....######....######....',
+    '...######..##..######...',
+    '..#####...####...#####..',
+    '.#####...######...#####.',
+    '#####...########...#####',
+    '####...##########...####',
+    '.##...############...##.',
+    '.....######..######.....',
+    '....######....######....',
+    '...######..##..######...',
+    '..#####...####...#####..',
+    '.#####...######...#####.',
+    '#####...########...#####',
+    '####...##########...####',
+    '.##...############...##.',
+    '.....######..######.....',
+    '....######....######....',
+    '...#####........#####...',
+    '..#####..........#####..',
+    '.#####............#####.',
+    '#####..............#####',
+    '####................####',
+    '.##..................##.',
+  ],
+  up1: [ // 60-79%: single chevron up (custom uploaded artwork)
+    '...........##...........',
+    '..........####..........',
+    '.........######.........',
+    '........########........',
+    '.......##########.......',
+    '......############......',
+    '.....######..######.....',
+    '....######....######....',
+    '...#####........#####...',
+    '..#####..........#####..',
+    '.#####............#####.',
+    '#####..............#####',
+    '####................####',
+    '.##..................##.',
+  ],
+  mid: [ // 40-59%: flat bar, steady (custom uploaded artwork)
+    '########################',
+    '########################',
+    '########################',
+    '########################',
+  ],
+  down1: [ // 20-39%: single chevron down (custom uploaded artwork)
+    '.##..................##.',
+    '####................####',
+    '#####..............#####',
+    '.#####............#####.',
+    '..#####..........#####..',
+    '...#####........#####...',
+    '....######....######....',
+    '.....######..######.....',
+    '......############......',
+    '.......##########.......',
+    '........########........',
+    '.........######.........',
+    '..........####..........',
+    '...........##...........',
+  ],
+  down3: [ // 0-19%: triple chevron down (custom uploaded artwork)
+    '.##..................##.',
+    '####................####',
+    '#####..............#####',
+    '.#####............#####.',
+    '..#####..........#####..',
+    '...#####........#####...',
+    '....######....######....',
+    '.....######..######.....',
+    '.##...############...##.',
+    '####...##########...####',
+    '#####...########...#####',
+    '.#####...######...#####.',
+    '..#####...####...#####..',
+    '...######..##...#####...',
+    '....######....######....',
+    '.....######..######.....',
+    '.##...############...##.',
+    '####...##########...####',
+    '#####...########...#####',
+    '.#####...######...#####.',
+    '..#####...####...#####..',
+    '...######..##...#####...',
+    '....######....######....',
+    '.....######..######.....',
+    '......############......',
+    '.......##########.......',
+    '........########........',
+    '.........######.........',
+    '..........####..........',
+    '...........##...........',
+  ],
+};
+
+const MORALE_RANK_IMAGES = {
+  up3: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAeCAQAAACcJxZuAAAACXBIWXMAAAsTAAALEwEAmpwYAAADGGlDQ1BQaG90b3Nob3AgSUNDIHByb2ZpbGUAAHjaY2BgnuDo4uTKJMDAUFBUUuQe5BgZERmlwH6egY2BmYGBgYGBITG5uMAxIMCHgYGBIS8/L5UBFTAyMHy7xsDIwMDAcFnX0cXJlYE0wJpcUFTCwMBwgIGBwSgltTiZgYHhCwMDQ3p5SUEJAwNjDAMDg0hSdkEJAwNjAQMDg0h2SJAzAwNjCwMDE09JakUJAwMDg3N+QWVRZnpGiYKhpaWlgmNKflKqQnBlcUlqbrGCZ15yflFBflFiSWoKAwMD1A4GBgYGXpf8EgX3xMw8BSMDVQYqg4jIKAUICxE+CDEESC4tKoMHJQODAIMCgwGDA0MAQyJDPcMChqMMbxjFGV0YSxlXMN5jEmMKYprAdIFZmDmSeSHzGxZLlg6WW6x6rK2s99gs2aaxfWMPZ9/NocTRxfGFM5HzApcj1xZuTe4FPFI8U3mFeCfxCfNN45fhXyygI7BD0FXwilCq0A/hXhEVkb2i4aJfxCaJG4lfkaiQlJM8JpUvLS19QqZMVl32llyfvIv8H4WtioVKekpvldeqFKiaqP5UO6jepRGqqaT5QeuA9iSdVF0rPUG9V/pHDBYY1hrFGNuayJsym740u2C+02KJ5QSrOutcmzjbQDtXe2sHY0cdJzVnJRcFV3k3BXdlD3VPXS8Tbxsfd99gvwT//ID6wIlBS4N3hVwMfRnOFCEXaRUVEV0RMzN2T9yDBLZE3aSw5IaUNak30zkyLDIzs+ZmX8xlz7PPryjYVPiuWLskq3RV2ZsK/cqSql01jLVedVPrHzbqNdU0n22VaytsP9op3VXUfbpXta+x/+5Em0mzJ/+dGj/t8AyNmf2zvs9JmHt6vvmCpYtEFrcu+bYsc/m9lSGrTq9xWbtvveWGbZtMNm/ZarJt+w6rnft3u+45uy9s/4ODOYd+Hmk/Jn58xUnrU+fOJJ/9dX7SRe1LR68kXv13fc5Nm1t379TfU75/4mHeY7En+59lvhB5efB1/lv5dxc+NH0y/fzq64Lv4T8Ffp360/rP8f9/AA0ADzT6lvFdAAAAIGNIUk0AAHolAACAgwAA+f8AAIDpAAB1MAAA6mAAADqYAAAXb5JfxUYAAAXOSURBVHgBAL4FQfoA/wD/AP8A/wD/AP8A/wD/AP8A/wD/Af+H/4n/Af8A/wD/AP8A/wD/AP8A/wD/AP8AAP8A/wD/AP8A/wD/AP8A/wD/AP8B/6n//////6v/Af8A/wD/AP8A/wD/AP8A/wD/AAD/AP8A/wD/AP8A/wD/AP8A/wf/uP///////////8H/B/8A/wD/AP8A/wD/AP8A/wAA/wD/AP8A/wD/AP8A/wD/Df+4/////////////////8H/Df8A/wD/AP8A/wD/AP8AAP8A/wD/AP8A/wD/AP8N/9f//////////////////////9f/Df8A/wD/AP8A/wD/AAD/AP8A/wD/AP8A/w3/1////////////5T/m////////////9f/Df8A/wD/AP8A/wAA/wD/AP8A/wD/Jf/p////////////h/8A/wD/if///////////+n/Jf8A/wD/AP8AAP8A/wD/AP8x/+n///////////+H/wD/AP8A/wD/if///////////+n/Mf8A/wD/AAD/AP8A/zH/9f///////////4f/AP8B/4f/if8B/wD/if////////////X/Mf8A/wAA/wD/WP/1////////////c/8A/wH/qf//////q/8B/wD/c/////////////X/WP8AAP85//////////////9t/wD/B/+4////////////wf8H/wD/bf//////////////OQD/3v///////////0j/AP8A/7j/////////////////wf8A/wD/SP///////////94A/73/////////SP8A/yT/2v//////////////////////2v8k/wD/SP////////+9AP8Z/73/vf85/wD/JP/a////////////lP+b////////////2v8k/wD/Of+9/73/GQD/AP8A/wD/AP8l/+n///////////+H/wD/AP+J////////////6f8l/wD/AP8A/wAA/wD/AP8A/zH/6f///////////4f/AP8A/wD/AP+J////////////6f8x/wD/AP8AAP8A/wD/Mf/1////////////h/8A/wH/h/+J/wH/AP+J////////////9f8x/wD/AAD/AP9Y//X///////////9z/wD/Af+p//////+r/wH/AP9z////////////9f9Y/wAA/zn//////////////23/AP8H/7j////////////B/wf/AP9t//////////////85AP/e////////////SP8A/wD/uP/////////////////B/wD/AP9I////////////3gD/vf////////9I/wD/JP/a///////////////////////a/yT/AP9I/////////70A/xn/vf+9/zn/AP8k/9r///////////+U/5v////////////a/yT/AP85/73/vf8ZAP8A/wD/AP8A/yX/6f///////////5H/AP8A/5H////////////p/yX/AP8A/wD/AAD/AP8A/wD/Mf/p////////////gv8A/wD/AP8A/4L////////////p/zH/AP8A/wAA/wD/AP8x//X///////////95/wD/AP8A/wD/AP8A/3n////////////1/zH/AP8AAP8A/1j/9f///////////3P/AP8A/wD/AP8A/wD/AP8A/3P////////////1/1j/AAD/Of//////////////dP8A/wD/AP8A/wD/AP8A/wD/AP8A/3T//////////////zkA/97/////////+/9T/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/1P/+//////////eAP+9/////////1P/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/1P/////////vQD/Gf+9/73/Of8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/zn/vf+9/xkBAAD//zhIK3w28BsJAAAAAElFTkSuQmCC', // 80-100%
+  up1: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAOCAQAAACf8RT1AAAACXBIWXMAAAsTAAALEwEAmpwYAAADGGlDQ1BQaG90b3Nob3AgSUNDIHByb2ZpbGUAAHjaY2BgnuDo4uTKJMDAUFBUUuQe5BgZERmlwH6egY2BmYGBgYGBITG5uMAxIMCHgYGBIS8/L5UBFTAyMHy7xsDIwMDAcFnX0cXJlYE0wJpcUFTCwMBwgIGBwSgltTiZgYHhCwMDQ3p5SUEJAwNjDAMDg0hSdkEJAwNjAQMDg0h2SJAzAwNjCwMDE09JakUJAwMDg3N+QWVRZnpGiYKhpaWlgmNKflKqQnBlcUlqbrGCZ15yflFBflFiSWoKAwMD1A4GBgYGXpf8EgX3xMw8BSMDVQYqg4jIKAUICxE+CDEESC4tKoMHJQODAIMCgwGDA0MAQyJDPcMChqMMbxjFGV0YSxlXMN5jEmMKYprAdIFZmDmSeSHzGxZLlg6WW6x6rK2s99gs2aaxfWMPZ9/NocTRxfGFM5HzApcj1xZuTe4FPFI8U3mFeCfxCfNN45fhXyygI7BD0FXwilCq0A/hXhEVkb2i4aJfxCaJG4lfkaiQlJM8JpUvLS19QqZMVl32llyfvIv8H4WtioVKekpvldeqFKiaqP5UO6jepRGqqaT5QeuA9iSdVF0rPUG9V/pHDBYY1hrFGNuayJsym740u2C+02KJ5QSrOutcmzjbQDtXe2sHY0cdJzVnJRcFV3k3BXdlD3VPXS8Tbxsfd99gvwT//ID6wIlBS4N3hVwMfRnOFCEXaRUVEV0RMzN2T9yDBLZE3aSw5IaUNak30zkyLDIzs+ZmX8xlz7PPryjYVPiuWLskq3RV2ZsK/cqSql01jLVedVPrHzbqNdU0n22VaytsP9op3VXUfbpXta+x/+5Em0mzJ/+dGj/t8AyNmf2zvs9JmHt6vvmCpYtEFrcu+bYsc/m9lSGrTq9xWbtvveWGbZtMNm/ZarJt+w6rnft3u+45uy9s/4ODOYd+Hmk/Jn58xUnrU+fOJJ/9dX7SRe1LR68kXv13fc5Nm1t379TfU75/4mHeY7En+59lvhB5efB1/lv5dxc+NH0y/fzq64Lv4T8Ffp360/rP8f9/AA0ADzT6lvFdAAAAIGNIUk0AAHolAACAgwAA+f8AAIDpAAB1MAAA6mAAADqYAAAXb5JfxUYAAAK+SURBVHgBAK4CUf0A/wD/AP8A/wD/AP8A/wD/AP8A/wD/Af+H/4n/Af8A/wD/AP8A/wD/AP8A/wD/AP8AAP8A/wD/AP8A/wD/AP8A/wD/AP8B/6n//////6v/Af8A/wD/AP8A/wD/AP8A/wD/AAD/AP8A/wD/AP8A/wD/AP8A/wf/uP///////////8H/B/8A/wD/AP8A/wD/AP8A/wAA/wD/AP8A/wD/AP8A/wD/Df+4/////////////////8H/Df8A/wD/AP8A/wD/AP8AAP8A/wD/AP8A/wD/AP8N/9f//////////////////////9f/Df8A/wD/AP8A/wD/AAD/AP8A/wD/AP8A/w3/1////////////5T/m////////////9f/Df8A/wD/AP8A/wAA/wD/AP8A/wD/Jf/p////////////kf8A/wD/kf///////////+n/Jf8A/wD/AP8AAP8A/wD/AP8x/+n///////////+C/wD/AP8A/wD/gv///////////+n/Mf8A/wD/AAD/AP8A/zH/9f///////////3n/AP8A/wD/AP8A/wD/ef////////////X/Mf8A/wAA/wD/WP/1////////////c/8A/wD/AP8A/wD/AP8A/wD/c/////////////X/WP8AAP85//////////////90/wD/AP8A/wD/AP8A/wD/AP8A/wD/dP//////////////OQD/3v/////////7/1P/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/U//7/////////94A/73/////////U/8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/U/////////+9AP8Z/73/vf85/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/Of+9/73/GQEAAP//bpHDTe9MJX0AAAAASUVORK5CYII=', // 60-79%
+  mid: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAECAQAAAA+ajeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAADGGlDQ1BQaG90b3Nob3AgSUNDIHByb2ZpbGUAAHjaY2BgnuDo4uTKJMDAUFBUUuQe5BgZERmlwH6egY2BmYGBgYGBITG5uMAxIMCHgYGBIS8/L5UBFTAyMHy7xsDIwMDAcFnX0cXJlYE0wJpcUFTCwMBwgIGBwSgltTiZgYHhCwMDQ3p5SUEJAwNjDAMDg0hSdkEJAwNjAQMDg0h2SJAzAwNjCwMDE09JakUJAwMDg3N+QWVRZnpGiYKhpaWlgmNKflKqQnBlcUlqbrGCZ15yflFBflFiSWoKAwMD1A4GBgYGXpf8EgX3xMw8BSMDVQYqg4jIKAUICxE+CDEESC4tKoMHJQODAIMCgwGDA0MAQyJDPcMChqMMbxjFGV0YSxlXMN5jEmMKYprAdIFZmDmSeSHzGxZLlg6WW6x6rK2s99gs2aaxfWMPZ9/NocTRxfGFM5HzApcj1xZuTe4FPFI8U3mFeCfxCfNN45fhXyygI7BD0FXwilCq0A/hXhEVkb2i4aJfxCaJG4lfkaiQlJM8JpUvLS19QqZMVl32llyfvIv8H4WtioVKekpvldeqFKiaqP5UO6jepRGqqaT5QeuA9iSdVF0rPUG9V/pHDBYY1hrFGNuayJsym740u2C+02KJ5QSrOutcmzjbQDtXe2sHY0cdJzVnJRcFV3k3BXdlD3VPXS8Tbxsfd99gvwT//ID6wIlBS4N3hVwMfRnOFCEXaRUVEV0RMzN2T9yDBLZE3aSw5IaUNak30zkyLDIzs+ZmX8xlz7PPryjYVPiuWLskq3RV2ZsK/cqSql01jLVedVPrHzbqNdU0n22VaytsP9op3VXUfbpXta+x/+5Em0mzJ/+dGj/t8AyNmf2zvs9JmHt6vvmCpYtEFrcu+bYsc/m9lSGrTq9xWbtvveWGbZtMNm/ZarJt+w6rnft3u+45uy9s/4ODOYd+Hmk/Jn58xUnrU+fOJJ/9dX7SRe1LR68kXv13fc5Nm1t379TfU75/4mHeY7En+59lvhB5efB1/lv5dxc+NH0y/fzq64Lv4T8Ffp360/rP8f9/AA0ADzT6lvFdAAAAIGNIUk0AAHolAACAgwAA+f8AAIDpAAB1MAAA6mAAADqYAAAXb5JfxUYAAADUSURBVHgBAMQAO/8A////////////////////////////////////////////////////////////////AP///////////////////////////////////////////////////////////////wD///////////////////////////////////////////////////////////////8A////////////////////////////////////////////////////////////////AQAA//87i79BrRDLaAAAAABJRU5ErkJggg==', // 40-59%
+  down1: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAOCAQAAACf8RT1AAAACXBIWXMAAAsTAAALEwEAmpwYAAADGGlDQ1BQaG90b3Nob3AgSUNDIHByb2ZpbGUAAHjaY2BgnuDo4uTKJMDAUFBUUuQe5BgZERmlwH6egY2BmYGBgYGBITG5uMAxIMCHgYGBIS8/L5UBFTAyMHy7xsDIwMDAcFnX0cXJlYE0wJpcUFTCwMBwgIGBwSgltTiZgYHhCwMDQ3p5SUEJAwNjDAMDg0hSdkEJAwNjAQMDg0h2SJAzAwNjCwMDE09JakUJAwMDg3N+QWVRZnpGiYKhpaWlgmNKflKqQnBlcUlqbrGCZ15yflFBflFiSWoKAwMD1A4GBgYGXpf8EgX3xMw8BSMDVQYqg4jIKAUICxE+CDEESC4tKoMHJQODAIMCgwGDA0MAQyJDPcMChqMMbxjFGV0YSxlXMN5jEmMKYprAdIFZmDmSeSHzGxZLlg6WW6x6rK2s99gs2aaxfWMPZ9/NocTRxfGFM5HzApcj1xZuTe4FPFI8U3mFeCfxCfNN45fhXyygI7BD0FXwilCq0A/hXhEVkb2i4aJfxCaJG4lfkaiQlJM8JpUvLS19QqZMVl32llyfvIv8H4WtioVKekpvldeqFKiaqP5UO6jepRGqqaT5QeuA9iSdVF0rPUG9V/pHDBYY1hrFGNuayJsym740u2C+02KJ5QSrOutcmzjbQDtXe2sHY0cdJzVnJRcFV3k3BXdlD3VPXS8Tbxsfd99gvwT//ID6wIlBS4N3hVwMfRnOFCEXaRUVEV0RMzN2T9yDBLZE3aSw5IaUNak30zkyLDIzs+ZmX8xlz7PPryjYVPiuWLskq3RV2ZsK/cqSql01jLVedVPrHzbqNdU0n22VaytsP9op3VXUfbpXta+x/+5Em0mzJ/+dGj/t8AyNmf2zvs9JmHt6vvmCpYtEFrcu+bYsc/m9lSGrTq9xWbtvveWGbZtMNm/ZarJt+w6rnft3u+45uy9s/4ODOYd+Hmk/Jn58xUnrU+fOJJ/9dX7SRe1LR68kXv13fc5Nm1t379TfU75/4mHeY7En+59lvhB5efB1/lv5dxc+NH0y/fzq64Lv4T8Ffp360/rP8f9/AA0ADzT6lvFdAAAAIGNIUk0AAHolAACAgwAA+f8AAIDpAAB1MAAA6mAAADqYAAAXb5JfxUYAAAK+SURBVHgBAK4CUf0A/xn/vf+9/zn/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP85/73/vf8ZAP+9/////////0//AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/0//////////vQD/3v/////////7/0//AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/T//7/////////94A/1r////////////7/3H/AP8A/wD/AP8A/wD/AP8A/wD/AP9x//v///////////9aAP8A/1j/9f///////////3P/AP8A/wD/AP8A/wD/AP8A/3P////////////1/1j/AAD/AP8A/zH/9f///////////3f/AP8A/wD/AP8A/wD/d/////////////X/Mf8A/wAA/wD/AP8A/zH/6f///////////4X/AP8A/wD/AP+F////////////6f8x/wD/AP8AAP8A/wD/AP8A/yX/6f///////////4//AP8A/4/////////////p/yX/AP8A/wD/AAD/AP8A/wD/AP8A/w3/1////////////5T/m////////////9f/Df8A/wD/AP8A/wAA/wD/AP8A/wD/AP8A/w3/1///////////////////////1/8N/wD/AP8A/wD/AP8AAP8A/wD/AP8A/wD/AP8A/w3/uP/////////////////B/w3/AP8A/wD/AP8A/wD/AAD/AP8A/wD/AP8A/wD/AP8A/wf/uP///////////8H/B/8A/wD/AP8A/wD/AP8A/wAA/wD/AP8A/wD/AP8A/wD/AP8A/wH/qf//////q/8B/wD/AP8A/wD/AP8A/wD/AP8AAP8A/wD/AP8A/wD/AP8A/wD/AP8A/wH/h/+J/wH/AP8A/wD/AP8A/wD/AP8A/wD/AAEAAP//JSbDbxuvZUAAAAAASUVORK5CYII=', // 20-39%
+  down3: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAeCAQAAACcJxZuAAAACXBIWXMAAAsTAAALEwEAmpwYAAADGGlDQ1BQaG90b3Nob3AgSUNDIHByb2ZpbGUAAHjaY2BgnuDo4uTKJMDAUFBUUuQe5BgZERmlwH6egY2BmYGBgYGBITG5uMAxIMCHgYGBIS8/L5UBFTAyMHy7xsDIwMDAcFnX0cXJlYE0wJpcUFTCwMBwgIGBwSgltTiZgYHhCwMDQ3p5SUEJAwNjDAMDg0hSdkEJAwNjAQMDg0h2SJAzAwNjCwMDE09JakUJAwMDg3N+QWVRZnpGiYKhpaWlgmNKflKqQnBlcUlqbrGCZ15yflFBflFiSWoKAwMD1A4GBgYGXpf8EgX3xMw8BSMDVQYqg4jIKAUICxE+CDEESC4tKoMHJQODAIMCgwGDA0MAQyJDPcMChqMMbxjFGV0YSxlXMN5jEmMKYprAdIFZmDmSeSHzGxZLlg6WW6x6rK2s99gs2aaxfWMPZ9/NocTRxfGFM5HzApcj1xZuTe4FPFI8U3mFeCfxCfNN45fhXyygI7BD0FXwilCq0A/hXhEVkb2i4aJfxCaJG4lfkaiQlJM8JpUvLS19QqZMVl32llyfvIv8H4WtioVKekpvldeqFKiaqP5UO6jepRGqqaT5QeuA9iSdVF0rPUG9V/pHDBYY1hrFGNuayJsym740u2C+02KJ5QSrOutcmzjbQDtXe2sHY0cdJzVnJRcFV3k3BXdlD3VPXS8Tbxsfd99gvwT//ID6wIlBS4N3hVwMfRnOFCEXaRUVEV0RMzN2T9yDBLZE3aSw5IaUNak30zkyLDIzs+ZmX8xlz7PPryjYVPiuWLskq3RV2ZsK/cqSql01jLVedVPrHzbqNdU0n22VaytsP9op3VXUfbpXta+x/+5Em0mzJ/+dGj/t8AyNmf2zvs9JmHt6vvmCpYtEFrcu+bYsc/m9lSGrTq9xWbtvveWGbZtMNm/ZarJt+w6rnft3u+45uy9s/4ODOYd+Hmk/Jn58xUnrU+fOJJ/9dX7SRe1LR68kXv13fc5Nm1t379TfU75/4mHeY7En+59lvhB5efB1/lv5dxc+NH0y/fzq64Lv4T8Ffp360/rP8f9/AA0ADzT6lvFdAAAAIGNIUk0AAHolAACAgwAA+f8AAIDpAAB1MAAA6mAAADqYAAAXb5JfxUYAAAXOSURBVHgBAL4FQfoA/xn/vf+9/zn/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP85/73/vf8ZAP+9/////////0//AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/0//////////vQD/3v/////////7/0//AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/T//7/////////94A/1r////////////7/3H/AP8A/wD/AP8A/wD/AP8A/wD/AP9x//v///////////9aAP8A/1j/9f///////////3P/AP8A/wD/AP8A/wD/AP8A/3P////////////1/1j/AAD/AP8A/zH/9f///////////3f/AP8A/wD/AP8A/wD/d/////////////X/Mf8A/wAA/wD/AP8A/zH/6f///////////4X/AP8A/wD/AP+F////////////6f8x/wD/AP8AAP8A/wD/AP8A/yX/6f///////////4//AP8A/4/////////////p/yX/AP8A/wD/AAD/Gf+9/73/Of8A/yT/2v///////////5T/m////////////9r/JP8A/zn/vf+9/xkA/73/////////SP8A/yT/2v//////////////////////2v8k/wD/SP////////+9AP/e////////////SP8A/wD/uP/////////////////B/wD/AP9I////////////3gD/Wv//////////////bf8A/wf/uP///////////8H/B/8A/23//////////////1oA/wD/WP/1////////////c/8A/wH/qf//////q/8B/wD/c/////////////X/WP8AAP8A/wD/Mf/1////////////h/8A/wH/h/+J/wH/AP9n////////////9f8x/wD/AAD/AP8A/wD/Mf/p////////////h/8A/wD/AP8A/4n////////////p/zH/AP8A/wAA/wD/AP8A/wD/Jf/p////////////h/8A/wD/if///////////+n/Jf8A/wD/AP8AAP8Z/73/vf85/wD/JP/a////////////lP+b////////////2v8k/wD/Of+9/73/GQD/vf////////9I/wD/JP/a///////////////////////a/yT/AP9I/////////70A/97///////////9I/wD/AP+4/////////////////8H/AP8A/0j////////////eAP9a//////////////9t/wD/B/+4////////////wf8H/wD/bf//////////////WgD/AP9Y//X///////////9z/wD/Af+p//////+r/wH/AP9z////////////9f9Y/wAA/wD/AP8x//X///////////+H/wD/Af+H/4n/Af8A/2f////////////1/zH/AP8AAP8A/wD/AP8x/+n///////////+H/wD/AP8A/wD/if///////////+n/Mf8A/wD/AAD/AP8A/wD/AP8l/+n///////////+H/wD/AP+J////////////6f8l/wD/AP8A/wAA/wD/AP8A/wD/AP8N/9f///////////+U/5v////////////X/w3/AP8A/wD/AP8AAP8A/wD/AP8A/wD/AP8N/9f//////////////////////9f/Df8A/wD/AP8A/wD/AAD/AP8A/wD/AP8A/wD/AP8N/7j/////////////////wf8N/wD/AP8A/wD/AP8A/wAA/wD/AP8A/wD/AP8A/wD/AP8H/7j////////////B/wf/AP8A/wD/AP8A/wD/AP8AAP8A/wD/AP8A/wD/AP8A/wD/AP8B/6n//////6v/Af8A/wD/AP8A/wD/AP8A/wD/AAD/AP8A/wD/AP8A/wD/AP8A/wD/AP8B/4f/if8B/wD/AP8A/wD/AP8A/wD/AP8A/wABAAD//3BfK95oWerqAAAAAElFTkSuQmCC', // 0-19%
+};
+
+// Picks the morale rank image for a given percentage - the bottom
+// "grade" readout for the Morale parameter now uses these instead of
+// the S/A/B/C/D/E letter grades (or a manually-typed special
+// character). Same band edges as the icon-swap above: 80-100 / 60-79
+// / 40-59 / 20-39 / 0-19.
+function moraleRankImage(pct) {
+  pct = Number(pct) || 0;
+  if (pct >= 80) return MORALE_RANK_IMAGES.up3;
+  if (pct >= 60) return MORALE_RANK_IMAGES.up1;
+  if (pct >= 40) return MORALE_RANK_IMAGES.mid;
+  if (pct >= 20) return MORALE_RANK_IMAGES.down1;
+  return MORALE_RANK_IMAGES.down3;
+}
+
+// Picks the right morale drawing for a given percentage. Matches the
+// same band edges the user specified: 80-100 / 60-79 / 40-59 / 20-39 / 0-19.
+function moraleIconPattern(pct) {
+  pct = Number(pct) || 0;
+  if (pct >= 80) return MORALE_PIXEL_ICONS.up3;
+  if (pct >= 60) return MORALE_PIXEL_ICONS.up1;
+  if (pct >= 40) return MORALE_PIXEL_ICONS.mid;
+  if (pct >= 20) return MORALE_PIXEL_ICONS.down1;
+  return MORALE_PIXEL_ICONS.down3;
+}
 
 // Builds an inline SVG from a pixel grid. Grids need not be square -
 // width comes from the longest row, height from the row count - and
@@ -1255,7 +1419,15 @@ function ParamCell(p) {
   return div({ class: () => 'param-cell' + (p.special.val ? ' special' : '') },
     div({ class: 'param-fill', style: () => `height:${clamp(Number(p.percent.val) || 0, 0, 100)}%` }),
     ParamIcon(p),
-    span({ class: 'param-grade' }, () => p.special.val ? p.specialGrade.val : gradeFor(p.percent.val)),
+    span({ class: 'param-grade' }, () => {
+      // Morale's rank image is driven purely by its percentage - it
+      // ignores the "special" flag/character entirely, so this checks
+      // the icon specifically rather than p.special.val.
+      if (p.icon.val === MORALE_ICON_EMOJI) {
+        return img({ class: 'morale-rank-img', src: moraleRankImage(p.percent.val), alt: '', draggable: 'false' });
+      }
+      return p.special.val ? p.specialGrade.val : gradeFor(p.percent.val);
+    }),
   );
 }
 
@@ -1480,21 +1652,37 @@ function ParamEditRow(p, onRemove) {
       type: 'number', min: 0, max: 100, value: p.percent.val,
       oninput: e => { p.percent.val = clamp(parseInt(e.target.value, 10) || 0, 0, 100); },
     }),
-    span({ class: 'grade-preview' }, () => p.special.val ? '' : gradeFor(p.percent.val)),
-    div({ style: 'display:flex;flex-direction:column;gap:2px;' },
-      label({ class: 'special-lbl' },
-        input({
-          type: 'checkbox', checked: p.special.val,
-          onchange: e => { p.special.val = e.target.checked; },
-        }),
-        'special',
-      ),
-      () => p.special.val ? input({
-        type: 'text', value: p.specialGrade.val, maxlength: 3,
-        style: 'width:36px;padding:2px;',
-        oninput: e => { p.specialGrade.val = e.target.value; },
-      }) : '',
-    ),
+    span({ class: 'grade-preview' }, () => {
+      // Morale's rank is chosen automatically from its percentage (see
+      // MORALE_RANK_IMAGES / moraleRankImage above), so it gets a live
+      // image preview here instead of a letter grade, regardless of
+      // the special flag - it has no checkbox to control that (below).
+      if (p.icon.val === MORALE_ICON_EMOJI) {
+        return img({ class: 'grade-preview-img', src: moraleRankImage(p.percent.val), alt: '', draggable: 'false' });
+      }
+      return p.special.val ? '' : gradeFor(p.percent.val);
+    }),
+    () => {
+      // Every parameter except Morale keeps the "special" checkbox
+      // (and, when checked, a free-text character to show instead of
+      // the letter grade). Morale's rank is fully automatic from its
+      // percentage, so it gets no checkbox at all.
+      if (p.icon.val === MORALE_ICON_EMOJI) return '';
+      return div({ style: 'display:flex;flex-direction:column;gap:2px;' },
+        label({ class: 'special-lbl' },
+          input({
+            type: 'checkbox', checked: p.special.val,
+            onchange: e => { p.special.val = e.target.checked; },
+          }),
+          'special',
+        ),
+        () => p.special.val ? input({
+          type: 'text', value: p.specialGrade.val, maxlength: 3,
+          style: 'width:36px;padding:2px;',
+          oninput: e => { p.specialGrade.val = e.target.value; },
+        }) : '',
+      );
+    },
     button({
       class: 'remove-param',
       onclick: onRemove,
