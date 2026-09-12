@@ -696,11 +696,12 @@
     pointer-events: none;
   }
   /* Applied only for the instant of a PNG export (see downloadCardPng):
-     hides a skill-name's own text AND its empty-state placeholder
-     (::before) without shifting layout, so blank or still-default
-     skill slots don't show "Skill Name 1" / "Skill 2" placeholder
-     text baked into the exported image. */
-  .skill-name-text.export-hide-text {
+     hides a skill slot's name text and/or icon without shifting
+     layout, so a still-untouched skill slot (blank, or "Skill Name 1"
+     left at its default) doesn't show placeholder text or the default
+     icon baked into the exported image. The name variant also blanks
+     out the empty-state "Skill N" placeholder (::before). */
+  .export-hide-text {
     visibility: hidden !important;
   }
   .skill-name-text.export-hide-text::before {
@@ -1193,7 +1194,7 @@ function ParamIcon(p) {
 // icon can legitimately be empty (no icon set), in which case nothing
 // is rendered at all rather than falling back to a placeholder glyph.
 function SkillIcon(s) {
-  const container = span({ class: 'skill-icon' });
+  const container = span({ class: 'skill-icon skill-icon-el' });
   van.derive(() => {
     const iconVal = s.icon.val;
     // Hide the icon entirely whenever the skill has no name text - an
@@ -2049,17 +2050,20 @@ function safeFileName(name) {
 // either blank or still exactly the seeded default text (currently
 // only slot 1 ships with a non-empty default, "Skill Name 1", but
 // this checks every slot against its own DEFAULT_SKILLS entry so it
-// keeps working if that ever changes). Untouched slots' name text
-// (real text or the empty-state "Skill N" placeholder) gets hidden
-// only in the exported PNG - the live card keeps showing it so the
-// user still knows those slots are editable.
+// keeps working if that ever changes). For an untouched slot, both
+// the name text (real text or the empty-state "Skill N" placeholder)
+// and the icon (emoji or pixel-art) get hidden - but only in the
+// exported PNG; the live card keeps showing them so the user still
+// knows those slots are editable.
 function markUntouchedSkillsForExport(hide) {
   const nameEls = document.querySelectorAll('.skill-name-text');
+  const iconEls = document.querySelectorAll('.skill-icon-el');
   nameEls.forEach((el, i) => {
     const current = skills[i] ? skills[i].name.val : '';
     const defaultVal = DEFAULT_SKILLS[i] ? DEFAULT_SKILLS[i].name : '';
     const untouched = current.trim() === '' || current === defaultVal;
     el.classList.toggle('export-hide-text', hide && untouched);
+    if (iconEls[i]) iconEls[i].classList.toggle('export-hide-text', hide && untouched);
   });
 }
 
