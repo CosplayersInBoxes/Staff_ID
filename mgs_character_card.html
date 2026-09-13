@@ -195,6 +195,34 @@
     line-height: 1;
   }
 
+  /* Used by statNumberInput() for LIFE/PSYCHE/GMP+: strips the native
+     number-input chrome (border, background, spinner arrows) so it's
+     indistinguishable from plain text until clicked, while still being
+     a real clickable/typeable field. Colors and font size come from
+     the surrounding .stat-value/.gmp-value container, not from here. */
+  .plain-number-input {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    text-align: right;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .plain-number-input::-webkit-outer-spin-button,
+  .plain-number-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .plain-number-input:focus,
+  .plain-number-input:hover {
+    outline: 1px dashed rgba(255, 255, 255, 0.55);
+    outline-offset: 2px;
+  }
+
   /* ---------- PARAMETERS + SICKNESSES ROW ---------- */
   .params-and-sick {
     display: flex;
@@ -802,11 +830,6 @@ function gradeFor(pct) {
   if (pct >= 16.66) return 'D';
   if (pct > 0) return 'E';
   return '-';
-}
-
-function fourDigit(n) {
-  n = clamp(Math.round(Number(n) || 0), 0, 9999);
-  return String(n).padStart(4, '0');
 }
 
 // ---------- pixel-art icon set (alternative to emoji) ----------
@@ -1570,7 +1593,7 @@ function StatBar(labelText, valueState) {
   return div({ class: 'stat-bar' },
     div({ class: 'stat-fill', style: () => `width:${clamp(valueState.val / 9999 * 100, 0, 100)}%` }),
     div({ class: 'stat-label' }, labelText),
-    div({ class: 'stat-value' }, () => fourDigit(valueState.val)),
+    div({ class: 'stat-value' }, statNumberInput(valueState, 9999, 4)),
   );
 }
 
@@ -1676,7 +1699,7 @@ function Card() {
           ),
           div({ class: 'gmp-box' },
             div({ class: 'gmp-label' }, 'GMP+'),
-            div({ class: 'gmp-value' }, () => gmp.val),
+            div({ class: 'gmp-value' }, statNumberInput(gmp, 999999, 0)),
           ),
         ),
       ),
@@ -1729,6 +1752,43 @@ function numberInput(state, min, max) {
   van.derive(() => {
     const v = state.val;
     if (document.activeElement !== el && Number(el.value) !== v) el.value = v;
+  });
+  return el;
+}
+
+// A number input styled to sit directly on the card (LIFE/PSYCHE/GMP+)
+// rather than in the edit dialog: no visible border/background/spinner
+// arrows, just plain text the person can click into and type over. The
+// .plain-number-input CSS class does the visual stripping; padLength
+// (e.g. 4 for "0100") formats the value while unfocused, but shows the
+// bare number while the user is actively editing so they aren't
+// fighting leading zeros mid-keystroke.
+function statNumberInput(state, max, padLength) {
+  const format = v => {
+    const n = clamp(Math.round(Number(v)) || 0, 0, max);
+    return padLength ? String(n).padStart(padLength, '0') : String(n);
+  };
+  const chWidth = String(max).length;
+  const el = input({
+    type: 'number', min: 0, max, inputmode: 'numeric',
+    class: 'plain-number-input',
+    style: `width:${chWidth}ch`,
+    value: format(state.val),
+    oninput: e => {
+      const v = clamp(parseInt(e.target.value, 10) || 0, 0, max);
+      state.val = v;
+    },
+    onfocus: e => {
+      // Show the bare number (no padding) while editing, and select it
+      // so typing immediately replaces it rather than inserting.
+      e.target.value = String(clamp(Math.round(state.val) || 0, 0, max));
+      e.target.select();
+    },
+    onblur: e => { e.target.value = format(state.val); },
+  });
+  van.derive(() => {
+    const v = state.val;
+    if (document.activeElement !== el) el.value = format(v);
   });
   return el;
 }
