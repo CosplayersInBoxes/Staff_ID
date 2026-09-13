@@ -300,26 +300,10 @@
   }
 
   .sick-cell {
-    /* Written as a literal gradient rather than background: var(--hatch)
-       - html2canvas doesn't reliably resolve CSS custom properties used
-       inside background/gradient values, so the hatch pattern was
-       rendering blank (just the flat --bg-color) in exported PNGs even
-       though it displayed fine live in the browser.
-       The stops are also nudged apart (4px/4.01px instead of a literal
-       4px/4px "hard stop") - html2canvas has a known bug where a
-       repeating-linear-gradient with two color-stops at the exact same
-       position renders nothing at all, even though real browsers
-       handle that hard stop correctly. The 0.01px gap is invisible but
-       keeps html2canvas's gradient parser from bailing out. */
-    background: repeating-linear-gradient(
-      45deg,
-      #3a3a3a,
-      #3a3a3a 4px,
-      #b8b4a3 4.01px,
-      #b8b4a3 10px
-    );
-    border: 1px solid #555;
+    display: block;
     width: 2.2em;
+    height: 80px;
+    border: 1px solid #555;
   }
 
   /* ---------- BOTTOM: SKILLS + QUOTE ---------- */
@@ -741,7 +725,7 @@ import van from 'https://cdn.jsdelivr.net/gh/vanjs-org/van/public/van-1.6.0.min.
 
 Dropzone.autoDiscover = false;
 
-const { div, span, button, input, textarea, h2, h3, img } = van.tags;
+const { div, span, button, input, textarea, h2, h3, img, canvas } = van.tags;
 
 // ---------- helpers ----------
 function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
@@ -1506,8 +1490,8 @@ function Card() {
         div({ class: 'sick-panel' },
           div({ class: 'section-title' }, '<SICKNESSES>'),
           div({ class: 'sick-row' },
-            div({ class: 'sick-cell' }), div({ class: 'sick-cell' }),
-            div({ class: 'sick-cell' }), div({ class: 'sick-cell' }),
+            canvas({ class: 'sick-cell' }), canvas({ class: 'sick-cell' }),
+            canvas({ class: 'sick-cell' }), canvas({ class: 'sick-cell' }),
           ),
         ),
       ),
@@ -2085,6 +2069,7 @@ async function downloadCardPng(triggerBtn) {
   }
   if (triggerBtn) triggerBtn.disabled = true;
   markUntouchedSkillsForExport(true);
+  drawAllSickHatches();
   try {
     const canvas = await html2canvas(cardEl, {
       backgroundColor: null,
@@ -2156,9 +2141,55 @@ function EditorUI() {
 // returned subtree - so e.g. typing into the codename field would
 // destroy and recreate the whole editor dialog (and any focused
 // input inside it) on every keystroke.
+// The sicknesses row's diagonal hatch pattern is drawn on plain
+// <canvas> elements rather than via a CSS repeating-linear-gradient
+// background. html2canvas's gradient renderer is unreliable across
+// versions/edge-cases (custom-property backgrounds, "hard" color
+// stops at identical positions, etc.) and the hatch kept exporting
+// blank no matter how the gradient CSS was written. Copying pixels
+// from a live <canvas> element, by contrast, is one of html2canvas's
+// most solid, well-tested code paths, so we draw the pattern
+// ourselves once with the 2D canvas API and let html2canvas just
+// copy the bitmap as-is.
+function drawSickHatch(canvasEl) {
+  const rect = canvasEl.getBoundingClientRect();
+  const w = Math.max(1, Math.round(rect.width));
+  const h = Math.max(1, Math.round(rect.height));
+  // Oversample well beyond typical device pixel ratios so the stripes
+  // stay crisp even under html2canvas's own `scale: 2` export option.
+  const scaleFactor = Math.max(2, window.devicePixelRatio || 1) * 2;
+  canvasEl.width = w * scaleFactor;
+  canvasEl.height = h * scaleFactor;
+  const ctx = canvasEl.getContext('2d');
+  ctx.setTransform(scaleFactor, 0, 0, scaleFactor, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#b8b4a3';
+  ctx.fillRect(0, 0, w, h);
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(Math.PI / 4);
+  const diag = Math.sqrt(w * w + h * h);
+  ctx.fillStyle = '#3a3a3a';
+  for (let y = -diag; y < diag; y += 10) {
+    ctx.fillRect(-diag, y, diag * 2, 4);
+  }
+  ctx.restore();
+}
+
+function drawAllSickHatches() {
+  document.querySelectorAll('canvas.sick-cell').forEach(drawSickHatch);
+}
+
+window.addEventListener('resize', drawAllSickHatches);
+
 const app = document.getElementById('app');
 van.add(app, Card());
 van.add(app, EditorUI());
+// Draw after layout has actually settled (fonts, flex sizing) rather
+// than immediately on append, when getBoundingClientRect() could
+// still report stale/zero sizes.
+requestAnimationFrame(() => requestAnimationFrame(drawAllSickHatches));
+
 </script>
 
 </body>
