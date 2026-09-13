@@ -753,6 +753,15 @@
   .skill-name-text.export-hide-text::before {
     content: none !important;
   }
+  /* Quote/bio box gets its own export-hide variant rather than
+     .export-hide-text above: that one uses visibility:hidden, which
+     would also hide the box's dark background - but the box itself
+     (the frame/background) should stay visible in the export even
+     when its placeholder text doesn't. Only the text color is made
+     transparent here, so the glyphs disappear while the box remains. */
+  .quote-box.export-hide-quote-text {
+    color: transparent !important;
+  }
   /* light-on-dark fields (skills, quote) get a lighter hover/focus tint */
   .skills-box .editable-text:hover,
   .quote-box.editable-text:hover {
@@ -2261,14 +2270,17 @@ function markUntouchedSkillsForExport(hide) {
 }
 
 // Same idea as markUntouchedSkillsForExport, for the quote/bio
-// description box: hidden in the exported PNG whenever it's blank or
-// still exactly the seeded default placeholder text, but left visible
-// on the live card so the user can still see (and click into) it.
+// description box: its placeholder/default text is hidden in the
+// exported PNG whenever it's blank or still exactly the seeded
+// default text, but the box itself (dark background/frame) stays
+// visible either way - only the text color is toggled, not the whole
+// element - and the live card is left untouched so the user can still
+// see (and click into) it.
 function markUntouchedQuoteForExport(hide) {
   const el = document.querySelector('.quote-box');
   if (!el) return;
   const untouched = quote.val.trim() === '' || quote.val === DEFAULT_QUOTE;
-  el.classList.toggle('export-hide-text', hide && untouched);
+  el.classList.toggle('export-hide-quote-text', hide && untouched);
 }
 
 async function downloadCardPng(triggerBtn) {
