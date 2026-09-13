@@ -46,6 +46,56 @@
     display: contents;
   }
 
+  /* The card is a wide, landscape-shaped ID card - on a phone held
+     upright there just isn't enough width to show it at a usable size
+     even with the scaling above, so portrait phone users see this
+     prompt instead of the (hidden) card until they rotate. Pure CSS,
+     no JS: the media query alone shows/hides it live as the device
+     rotates. Desktop and landscape phones/tablets never see it. */
+  .rotate-prompt {
+    display: none;
+  }
+
+  @media (max-width: 930px) and (orientation: portrait) {
+    .rotate-prompt {
+      display: flex;
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 32px;
+      text-align: center;
+      background: #000;
+      color: #fff;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    .rotate-prompt .rotate-icon {
+      font-size: 3em;
+      line-height: 1;
+      animation: rotate-hint 1.8s ease-in-out infinite;
+    }
+    .rotate-prompt .rotate-text {
+      max-width: 26em;
+      font-size: 1.1em;
+      letter-spacing: 1px;
+    }
+    /* #app holds both the card and the editor UI (hamburger/download
+       buttons, dialog) - all of it waits behind the prompt until the
+       phone is rotated, rather than leaving controls tappable behind
+       an overlay that only covers the card. */
+    #app {
+      display: none;
+    }
+  }
+
+  @keyframes rotate-hint {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(90deg); }
+  }
+
   @media (max-width: 930px) {
     /* Below this width, applyMobileScale() takes over sizing .paper
        via inline width/transform (see the script) rather than the
@@ -845,6 +895,11 @@
 </style>
 </head>
 <body>
+
+<div class="rotate-prompt">
+  <div class="rotate-icon">📱</div>
+  <div class="rotate-text">Please rotate your device to landscape<br>to view and edit the Staff ID card.</div>
+</div>
 
 <div id="app"></div>
 
