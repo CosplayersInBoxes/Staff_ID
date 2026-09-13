@@ -1038,6 +1038,18 @@ const PIXEL_ICONS = {
     '#..#..#..#..#',
     '#############',
   ],
+  '🤒': [ // Sick (x-eyes face, custom uploaded artwork)
+    '.#.#.#.#.',
+    '..#...#..',
+    '.#.#.#.#.',
+    '.........',
+    '#########',
+    '#########',
+    '#########',
+    '#########',
+    '#########',
+    '#########',
+  ],
 };
 
 // ---------- Morale's percentage-dependent pixel art ----------
@@ -1053,6 +1065,8 @@ const MORALE_ICON_EMOJI = '🙌';
 // that column, same as a locked parameter's icon - so it only needs a
 // display component (SicknessIcon below), no edit-row/input.
 const HOSTILITY_ICON_EMOJI = '👮🏻\u200d♂️';
+// Same idea, for the second sickness column ("Sick").
+const SICK_ICON_EMOJI = '🤒';
 
 const MORALE_PIXEL_ICONS = {
   up3: [ // 80-100%: triple chevron up (custom uploaded artwork)
@@ -1273,19 +1287,20 @@ function SkillIcon(s) {
   return container;
 }
 
-// Fixed (non-editable) icon for the "Hostility" sickness column, same
-// emoji/pixel-art swap behavior as ParamIcon/SkillIcon above but with
-// no underlying state to read - it's always HOSTILITY_ICON_EMOJI - so
-// it only needs to react to the global pixelIconMode toggle.
-function SicknessIcon() {
+// Fixed (non-editable) icon for a sickness column, same emoji/pixel-art
+// swap behavior as ParamIcon/SkillIcon above but with no underlying
+// state to read - the emoji is a constant (e.g. HOSTILITY_ICON_EMOJI,
+// SICK_ICON_EMOJI) passed in by the caller - so it only needs to react
+// to the global pixelIconMode toggle.
+function SicknessIcon(emoji) {
   const container = span({ class: 'sickness-icon' });
   van.derive(() => {
-    const pattern = pixelIconMode.val ? PIXEL_ICONS[HOSTILITY_ICON_EMOJI] : null;
+    const pattern = pixelIconMode.val ? PIXEL_ICONS[emoji] : null;
     container.innerHTML = '';
     if (pattern) {
       container.appendChild(buildPixelSVG(pattern));
     } else {
-      container.textContent = HOSTILITY_ICON_EMOJI;
+      container.textContent = emoji;
     }
   });
   return container;
@@ -1348,8 +1363,8 @@ function createDefaultParams() {
     makeParam('✊', 10), // Fight
     makeParam('🛡️', 20), // Defense
     makeParam('🙌', 100, true, '⇈'), // Morale
-    // 👮🏻‍♂️ brig (bars)
-    // 🤒 sick (x-eyes)
+    // Sickness columns (Hostility, Sick - both implemented above as
+    // SICKNESS_ICONS/SicknessCell) - remaining ideas, not yet built:
     // 🤕 wounded (no idea)
     // 😵‍💫 PTSD (tear?)
     // ⬇️ Weakened (down arrow)
@@ -1544,12 +1559,15 @@ function ParamCell(p) {
 // red fill bar, only one of which is shown at a time:
 //   - value === 0  -> hatch canvas visible, bar hidden (the "off" state)
 //   - value 1-99   -> bar visible at that height %, hatch hidden
-// The first column (index 0) also gets a fixed "Hostility" icon (emoji
-// or pixel-art, matching the global toggle) plus a number readout of
-// the current value, styled like a parameter's letter-grade text.
-// Both are hidden at value 0 along with the bar - there's nothing
-// meaningful to show once hostility is "off" - and reappear together
-// as soon as the value is 1 or higher.
+// Columns with an entry in SICKNESS_ICONS also get that fixed icon
+// (emoji or pixel-art, matching the global toggle) plus a number
+// readout of the current value, styled like a parameter's letter-grade
+// text. Both are hidden at value 0 along with the bar - there's
+// nothing meaningful to show once that sickness is "off" - and
+// reappear together as soon as the value is 1 or higher.
+const SICKNESS_ICONS = [HOSTILITY_ICON_EMOJI, SICK_ICON_EMOJI];
+const SICKNESS_LABELS = ['Hostility', 'Sick'];
+
 function SicknessCell(i) {
   const state = sicknesses[i];
   const canvasEl = canvas({ class: 'sick-cell-hatch' });
@@ -1566,12 +1584,13 @@ function SicknessCell(i) {
   });
 
   let iconCol = '';
-  if (i === 0) {
+  const emoji = SICKNESS_ICONS[i];
+  if (emoji) {
     const gradeEl = span({ class: 'sickness-grade' }, () => {
       const v = clamp(Number(state.val) || 0, 0, 99);
       return v > 0 ? String(v) : '';
     });
-    iconCol = div({ class: 'sickness-icon-col' }, SicknessIcon(), gradeEl);
+    iconCol = div({ class: 'sickness-icon-col' }, SicknessIcon(emoji), gradeEl);
     van.derive(() => {
       const v = clamp(Number(state.val) || 0, 0, 99);
       iconCol.style.display = v > 0 ? 'flex' : 'none';
@@ -2160,7 +2179,7 @@ function Dialog() {
         h3({}, 'SICKNESSES'),
         div({ class: 'current-photo-hint' }, 'Each column: 0 shows the default hatch pattern; 1-99 shows a red progress bar filled to that percent.'),
         ...sicknesses.map((s, i) => Field(
-          i === 0 ? 'Hostility' : `Sickness ${i + 1}`,
+          SICKNESS_LABELS[i] || `Sickness ${i + 1}`,
           numberInput(s, 0, 99),
         )),
       ),
