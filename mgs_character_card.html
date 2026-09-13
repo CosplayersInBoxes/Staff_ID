@@ -35,6 +35,45 @@
     background-size: 100% 100%, cover;
   }
 
+  /* Wraps .paper so the mobile-scaling script (applyMobileScale, near
+     the bottom of this file) has a plain box to resize/collapse around
+     without disturbing .paper's own CSS. It's a no-op on desktop -
+     display:contents means it generates no box of its own, so .paper
+     lays out exactly as if this wrapper didn't exist at all - and it
+     only gets a real box once the script gives it one inline, below
+     the mobile breakpoint. */
+  .paper-scale-wrap {
+    display: contents;
+  }
+
+  @media (max-width: 930px) {
+    /* Below this width, applyMobileScale() takes over sizing .paper
+       via inline width/transform (see the script) rather than the
+       max-width:100% rule above, so the card's internal layout never
+       has to reflow into a too-narrow box - it renders at its normal
+       1280px design width and is scaled down as a whole, exactly like
+       zooming out, so every proportion stays identical to desktop.
+       .paper-scale-wrap gets a real box here (overriding display:
+       contents above) so it can be sized to match the shrunk card and
+       avoid leaving blank space below it. */
+    .paper-scale-wrap {
+      display: block;
+      margin: 0 auto;
+    }
+
+    /* iOS Safari auto-zooms the whole page when focusing a form field
+       with a computed font-size under 16px, which is jarring and not
+       something a desktop user would ever see. The editor dialog's
+       fields are ~15px (0.95em) and hit this; LIFE/PSYCHE/GMP+'s
+       on-card inputs are already well above 16px so they're left
+       alone rather than resized out of proportion with their labels. */
+    .field input[type="text"],
+    .field input[type="number"],
+    .field textarea {
+      font-size: 16px;
+    }
+  }
+
   .card {
     position: relative;
     width: 100%;
@@ -1066,7 +1105,7 @@ const PIXEL_ICONS = {
     '..##....##..',
     '....####....',
   ],
-  '😡': [ // Hostility (jail-cell bars, custom uploaded artwork)
+  '👮🏻\u200d♂️': [ // Hostility (jail-cell bars, custom uploaded artwork)
     '#############',
     '#..#..#..#..#',
     '#..#..#..#..#',
@@ -1101,7 +1140,7 @@ const PIXEL_ICONS = {
     '#.........#',
     '...##.##...',
   ],
-  '😱': [ // PTSD (tearful eyes, custom uploaded artwork)
+  '🛋️': [ // PTSD (tearful eyes, custom uploaded artwork)
     '..#.#..',
     '##...##',
     '.......',
@@ -1124,13 +1163,13 @@ const MORALE_ICON_EMOJI = '🙌';
 // icons, this isn't user-editable - it's a constant identifier for
 // that column, same as a locked parameter's icon - so it only needs a
 // display component (SicknessIcon below), no edit-row/input.
-const HOSTILITY_ICON_EMOJI = '😡';
+const HOSTILITY_ICON_EMOJI = '👮🏻\u200d♂️';
 // Same idea, for the second sickness column ("Sick").
 const SICK_ICON_EMOJI = '🤒';
 // Same idea, for the third sickness column ("Wounded").
-const WOUNDED_ICON_EMOJI = '🤕';
+const WOUNDED_ICON_EMOJI = '🩹';
 // Same idea, for the fourth sickness column ("PTSD").
-const PTSD_ICON_EMOJI = '😱';
+const PTSD_ICON_EMOJI = '🛋️';
 
 const MORALE_PIXEL_ICONS = {
   up3: [ // 80-100%: triple chevron up (custom uploaded artwork)
@@ -2355,6 +2394,20 @@ async function downloadCardPng(triggerBtn) {
   markUntouchedSkillsForExport(true);
   markUntouchedQuoteForExport(true);
   drawAllSickHatches();
+  // If applyMobileScale() has shrunk .paper with a CSS transform (see
+  // near the bottom of this file), undo that just for the capture -
+  // html2canvas should render the card at its real, full 1280px design
+  // resolution regardless of how small the phone screen it's being
+  // exported from is. Restored in the finally block either way.
+  const hadTransform = !!cardEl.style.transform;
+  const prevTransform = cardEl.style.transform;
+  const prevWidth = cardEl.style.width;
+  const prevMaxWidth = cardEl.style.maxWidth;
+  if (hadTransform) {
+    cardEl.style.transform = '';
+    cardEl.style.width = '1280px';
+    cardEl.style.maxWidth = 'none';
+  }
   try {
     const canvas = await html2canvas(cardEl, {
       backgroundColor: null,
@@ -2373,6 +2426,11 @@ async function downloadCardPng(triggerBtn) {
   } finally {
     markUntouchedSkillsForExport(false);
     markUntouchedQuoteForExport(false);
+    if (hadTransform) {
+      cardEl.style.transform = prevTransform;
+      cardEl.style.width = prevWidth;
+      cardEl.style.maxWidth = prevMaxWidth;
+    }
     if (triggerBtn) triggerBtn.disabled = false;
   }
 }
@@ -2468,13 +2526,65 @@ function drawAllSickHatches() {
 
 window.addEventListener('resize', drawAllSickHatches);
 
+// ---------- mobile scaling ----------
+// .paper is a fixed 1280px-wide design (grid columns, em-based font
+// sizes, absolute-ish positioning all tuned to that width). Letting it
+// simply reflow into a narrow phone viewport via max-width:100% (as it
+// does on desktop/tablet) squashes that layout rather than shrinking
+// it proportionally - text wraps oddly, columns collide, tap targets
+// overlap. Below MOBILE_BREAKPOINT, applyMobileScale() instead renders
+// .paper at its full natural 1280px width (so every desktop proportion
+// is preserved exactly) and visually scales the whole thing down with
+// a CSS transform, like zooming out evenly - identical UI, just
+// smaller. .paper-scale-wrap is then given a matching height so the
+// page doesn't leave blank space where the unscaled layout used to be.
+// Desktop is entirely unaffected: above the breakpoint every inline
+// style this sets is cleared, leaving the original CSS (width:1280px;
+// max-width:100%; aspect-ratio) in full control, exactly as before.
+const MOBILE_BREAKPOINT = 930;
+
+function applyMobileScale() {
+  const paperEl = document.querySelector('.paper');
+  const wrapEl = document.querySelector('.paper-scale-wrap');
+  if (!paperEl || !wrapEl) return;
+
+  if (window.innerWidth > MOBILE_BREAKPOINT) {
+    paperEl.style.width = '';
+    paperEl.style.maxWidth = '';
+    paperEl.style.transform = '';
+    paperEl.style.transformOrigin = '';
+    wrapEl.style.width = '';
+    wrapEl.style.height = '';
+    return;
+  }
+
+  const naturalWidth = 1280;
+  // Body has 20px padding on each side (see the body rule above) -
+  // match that so the scaled card doesn't touch the screen edges.
+  const available = Math.max(1, window.innerWidth - 40);
+  const scale = Math.min(1, available / naturalWidth);
+  paperEl.style.width = `${naturalWidth}px`;
+  paperEl.style.maxWidth = 'none';
+  paperEl.style.transformOrigin = 'top left';
+  paperEl.style.transform = `scale(${scale})`;
+  wrapEl.style.width = `${available}px`;
+  wrapEl.style.height = `${paperEl.getBoundingClientRect().height}px`;
+}
+
+window.addEventListener('resize', applyMobileScale);
+window.addEventListener('orientationchange', applyMobileScale);
+
 const app = document.getElementById('app');
-van.add(app, Card());
+van.add(app, div({ class: 'paper-scale-wrap' }, Card()));
 van.add(app, EditorUI());
 // Draw after layout has actually settled (fonts, flex sizing) rather
 // than immediately on append, when getBoundingClientRect() could
-// still report stale/zero sizes.
-requestAnimationFrame(() => requestAnimationFrame(drawAllSickHatches));
+// still report stale/zero sizes. Same reasoning applies to the mobile
+// scale calculation, which also depends on .paper's settled size.
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  drawAllSickHatches();
+  applyMobileScale();
+}));
 
 </script>
 
