@@ -2260,6 +2260,17 @@ function markUntouchedSkillsForExport(hide) {
   });
 }
 
+// Same idea as markUntouchedSkillsForExport, for the quote/bio
+// description box: hidden in the exported PNG whenever it's blank or
+// still exactly the seeded default placeholder text, but left visible
+// on the live card so the user can still see (and click into) it.
+function markUntouchedQuoteForExport(hide) {
+  const el = document.querySelector('.quote-box');
+  if (!el) return;
+  const untouched = quote.val.trim() === '' || quote.val === DEFAULT_QUOTE;
+  el.classList.toggle('export-hide-text', hide && untouched);
+}
+
 async function downloadCardPng(triggerBtn) {
   const cardEl = document.querySelector('.paper');
   if (!cardEl || typeof html2canvas !== 'function') {
@@ -2268,6 +2279,7 @@ async function downloadCardPng(triggerBtn) {
   }
   if (triggerBtn) triggerBtn.disabled = true;
   markUntouchedSkillsForExport(true);
+  markUntouchedQuoteForExport(true);
   drawAllSickHatches();
   try {
     const canvas = await html2canvas(cardEl, {
@@ -2286,6 +2298,7 @@ async function downloadCardPng(triggerBtn) {
     console.error('Failed to export card as PNG:', err);
   } finally {
     markUntouchedSkillsForExport(false);
+    markUntouchedQuoteForExport(false);
     if (triggerBtn) triggerBtn.disabled = false;
   }
 }
