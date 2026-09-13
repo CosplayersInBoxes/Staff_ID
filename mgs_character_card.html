@@ -304,12 +304,18 @@
        - html2canvas doesn't reliably resolve CSS custom properties used
        inside background/gradient values, so the hatch pattern was
        rendering blank (just the flat --bg-color) in exported PNGs even
-       though it displayed fine live in the browser. */
+       though it displayed fine live in the browser.
+       The stops are also nudged apart (4px/4.01px instead of a literal
+       4px/4px "hard stop") - html2canvas has a known bug where a
+       repeating-linear-gradient with two color-stops at the exact same
+       position renders nothing at all, even though real browsers
+       handle that hard stop correctly. The 0.01px gap is invisible but
+       keeps html2canvas's gradient parser from bailing out. */
     background: repeating-linear-gradient(
       45deg,
       #3a3a3a,
       #3a3a3a 4px,
-      #b8b4a3 4px,
+      #b8b4a3 4.01px,
       #b8b4a3 10px
     );
     border: 1px solid #555;
