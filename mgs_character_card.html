@@ -1050,6 +1050,18 @@ const PIXEL_ICONS = {
     '#########',
     '#########',
   ],
+  '🩹': [ // Wounded (bandage, custom uploaded artwork)
+    '...#####...',
+    '..##..###..',
+    '.#..##...#.',
+    '.#.##...##.',
+    '###...##..#',
+    '#....##...#',
+    '#..##..#..#',
+    '###########',
+    '#.........#',
+    '...##.##...',
+  ],
 };
 
 // ---------- Morale's percentage-dependent pixel art ----------
@@ -1067,6 +1079,8 @@ const MORALE_ICON_EMOJI = '🙌';
 const HOSTILITY_ICON_EMOJI = '👮🏻\u200d♂️';
 // Same idea, for the second sickness column ("Sick").
 const SICK_ICON_EMOJI = '🤒';
+// Same idea, for the third sickness column ("Wounded").
+const WOUNDED_ICON_EMOJI = '🩹';
 
 const MORALE_PIXEL_ICONS = {
   up3: [ // 80-100%: triple chevron up (custom uploaded artwork)
@@ -1363,9 +1377,9 @@ function createDefaultParams() {
     makeParam('✊', 10), // Fight
     makeParam('🛡️', 20), // Defense
     makeParam('🙌', 100, true, '⇈'), // Morale
-    // Sickness columns (Hostility, Sick - both implemented above as
-    // SICKNESS_ICONS/SicknessCell) - remaining ideas, not yet built:
-    // 🤕 wounded (no idea)
+    // Sickness columns (Hostility, Sick, Wounded - all implemented
+    // above as SICKNESS_ICONS/SicknessCell) - remaining ideas, not yet
+    // built:
     // 😵‍💫 PTSD (tear?)
     // ⬇️ Weakened (down arrow)
     // 🏴 OUTER OPS (flag)
@@ -1565,8 +1579,8 @@ function ParamCell(p) {
 // text. Both are hidden at value 0 along with the bar - there's
 // nothing meaningful to show once that sickness is "off" - and
 // reappear together as soon as the value is 1 or higher.
-const SICKNESS_ICONS = [HOSTILITY_ICON_EMOJI, SICK_ICON_EMOJI];
-const SICKNESS_LABELS = ['Hostility', 'Sick'];
+const SICKNESS_ICONS = [HOSTILITY_ICON_EMOJI, SICK_ICON_EMOJI, WOUNDED_ICON_EMOJI];
+const SICKNESS_LABELS = ['Hostility', 'Sick', 'Wounded'];
 
 function SicknessCell(i) {
   const state = sicknesses[i];
