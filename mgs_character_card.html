@@ -202,13 +202,23 @@
     background-image: url('profile.png');
     background-size: cover;
     background-position: center center;
+  }
+
+  /* Plain grayscale applies to the default silhouette placeholder
+     (before any photo is uploaded) AND to an uploaded photo when the
+     halftone effect is off (the default) - .has-photo.halftone-on is
+     the only case that skips this, since applyHalftoneEffect() has
+     already baked its own duotone coloring into that image and
+     filtering it again would double up the effect. */
+  .portrait:not(.has-photo),
+  .portrait.has-photo:not(.halftone-on) {
     filter: grayscale(100%) contrast(1.1);
   }
 
   .portrait.drag-over {
     outline: 3px dashed var(--orange);
     outline-offset: -6px;
-    filter: grayscale(60%) contrast(1.1) brightness(1.1);
+    filter: brightness(1.15);
   }
 
   /* Uploaded photo has real transparent pixels - drop the dark box so
@@ -1579,8 +1589,19 @@ const psyche = van.state(DEFAULT_PSYCHE);
 const gmp = van.state(DEFAULT_GMP);
 
 const profileImg = van.state(null);
+// Halftone-processed version of profileImg actually shown on the card
+// (see applyHalftoneEffect) - kept separate from profileImg itself so
+// the raw uploaded photo is what gets persisted/re-processed, rather
+// than repeatedly re-halftoning an already-halftoned image on every
+// page load.
+const profileImgDisplay = van.state(null);
 const dragOverPortrait = van.state(false);
 const portraitHasTransparency = van.state(false);
+// Off by default: when false, the raw uploaded photo is shown with
+// the classic plain grayscale filter (the card's original look);
+// when true, refreshProfileDisplay() runs it through
+// applyHalftoneEffect() instead. See the PORTRAIT editor section.
+const halftoneEnabled = van.state(false);
 
 const quote = van.state(DEFAULT_QUOTE);
 const ticker = van.state(DEFAULT_TICKER);
@@ -1607,6 +1628,7 @@ function collectSerializable() {
     psyche: psyche.val,
     gmp: gmp.val,
     profileImg: profileImg.val,
+    halftoneEnabled: halftoneEnabled.val,
     quote: quote.val,
     ticker: ticker.val,
     pixelIconMode: pixelIconMode.val,
@@ -1650,6 +1672,7 @@ function loadSavedState() {
   if (typeof data.life === 'number') life.val = clamp(Math.round(data.life), 0, 9999);
   if (typeof data.psyche === 'number') psyche.val = clamp(Math.round(data.psyche), 0, 9999);
   if (typeof data.gmp === 'number') gmp.val = clamp(Math.round(data.gmp), 0, 999999);
+  if (typeof data.halftoneEnabled === 'boolean') halftoneEnabled.val = data.halftoneEnabled;
   if (typeof data.profileImg === 'string') setProfileImage(data.profileImg);
   if (typeof data.quote === 'string') quote.val = data.quote;
   if (typeof data.ticker === 'string') ticker.val = data.ticker;
@@ -1830,8 +1853,8 @@ function Card() {
 
       div({ class: 'portrait-col' },
         div({
-          class: () => 'portrait' + (dragOverPortrait.val ? ' drag-over' : '') + (portraitHasTransparency.val ? ' has-transparency' : ''),
-          style: () => profileImg.val ? `background-image:url(${profileImg.val})` : '',
+          class: () => 'portrait' + (dragOverPortrait.val ? ' drag-over' : '') + (portraitHasTransparency.val ? ' has-transparency' : '') + (profileImgDisplay.val ? ' has-photo' : '') + (halftoneEnabled.val ? ' halftone-on' : ''),
+          style: () => profileImgDisplay.val ? `background-image:url(${profileImgDisplay.val})` : '',
           ondragover: e => { e.preventDefault(); dragOverPortrait.val = true; },
           ondragleave: () => { dragOverPortrait.val = false; },
           ondrop: e => {
@@ -2291,12 +2314,116 @@ function detectTransparency(dataUrl) {
   });
 }
 
+// Recreates the dot-screen duotone look of the in-game Staff ID
+// portraits (sampled from the source video: a warm khaki paper tone
+// with dark warm-black ink dots) from an arbitrary uploaded photo.
+// Works on a downscaled copy for a consistent, print-like dot pitch
+// regardless of the source photo's resolution, and treats each cell's
+// average alpha as its own opacity - so a photo that's already a
+// transparent cutout stays transparent here too, rather than gaining
+// a solid dot grid over empty areas.
+const HALFTONE_LIGHT = '#c9c4ab';
+const HALFTONE_DARK = '#2b2620';
+const HALFTONE_CELL = 6;
+
+function applyHalftoneEffect(dataUrl) {
+  return new Promise(resolve => {
+    if (!dataUrl) { resolve(null); return; }
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const srcW = img.naturalWidth || img.width || 1;
+        const srcH = img.naturalHeight || img.height || 1;
+        const targetW = 400;
+        const targetH = Math.max(1, Math.round(targetW * srcH / srcW));
+
+        const srcCanvas = document.createElement('canvas');
+        srcCanvas.width = targetW;
+        srcCanvas.height = targetH;
+        const srcCtx = srcCanvas.getContext('2d');
+        srcCtx.drawImage(img, 0, 0, targetW, targetH);
+        const { data } = srcCtx.getImageData(0, 0, targetW, targetH);
+
+        const outCanvas = document.createElement('canvas');
+        outCanvas.width = targetW;
+        outCanvas.height = targetH;
+        const ctx = outCanvas.getContext('2d');
+
+        for (let y = 0; y < targetH; y += HALFTONE_CELL) {
+          const ch = Math.min(HALFTONE_CELL, targetH - y);
+          for (let x = 0; x < targetW; x += HALFTONE_CELL) {
+            const cw = Math.min(HALFTONE_CELL, targetW - x);
+            let lumSum = 0, alphaSum = 0, count = 0;
+            for (let cy = 0; cy < ch; cy++) {
+              for (let cx = 0; cx < cw; cx++) {
+                const i = ((y + cy) * targetW + (x + cx)) * 4;
+                const a = data[i + 3];
+                lumSum += (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) * (a / 255);
+                alphaSum += a;
+                count++;
+              }
+            }
+            const avgAlpha = alphaSum / count / 255;
+            if (avgAlpha < 0.03) continue;
+            const avgLum = lumSum / count;
+
+            ctx.globalAlpha = avgAlpha;
+            ctx.fillStyle = HALFTONE_LIGHT;
+            ctx.fillRect(x, y, cw, ch);
+
+            // Darker source pixels get a bigger ink dot, exactly like a
+            // real halftone printing screen - a small overlap allowance
+            // at full black lets shadows read as solid rather than
+            // capping out at visibly separated dots.
+            const darkness = 1 - (avgLum / 255);
+            const maxRadius = (HALFTONE_CELL / 2) * 1.15;
+            const radius = maxRadius * Math.sqrt(darkness);
+            if (radius > 0.15) {
+              ctx.fillStyle = HALFTONE_DARK;
+              ctx.beginPath();
+              ctx.arc(x + cw / 2, y + ch / 2, radius, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+        ctx.globalAlpha = 1;
+        resolve(outCanvas.toDataURL('image/png'));
+      } catch (err) {
+        // e.g. a tainted canvas - fall back to the unprocessed photo
+        // rather than losing the portrait entirely.
+        console.warn('Halftone processing failed, using original photo:', err);
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 // Single entry point for setting the portrait photo, so transparency
 // detection always runs and every caller (dropzone, drag-and-drop,
 // restored-from-storage) stays consistent.
+// Recomputes profileImgDisplay from the current raw profileImg and the
+// halftoneEnabled toggle - called both when the photo itself changes
+// and when the toggle changes, so switching the setting takes effect
+// immediately on whatever photo is already loaded, not just future
+// uploads.
+function refreshProfileDisplay() {
+  const raw = profileImg.val;
+  if (!raw) { profileImgDisplay.val = null; return; }
+  if (!halftoneEnabled.val) { profileImgDisplay.val = raw; return; }
+  applyHalftoneEffect(raw).then(processedUrl => {
+    // Guard against staleness: only apply if this is still the current
+    // photo and the toggle hasn't been flipped back off while this was
+    // processing.
+    if (profileImg.val === raw && halftoneEnabled.val) profileImgDisplay.val = processedUrl;
+  });
+}
+
 function setProfileImage(dataUrl) {
   profileImg.val = dataUrl || null;
   if (!dataUrl) {
+    profileImgDisplay.val = null;
     portraitHasTransparency.val = false;
     return;
   }
@@ -2305,6 +2432,7 @@ function setProfileImage(dataUrl) {
     // this was still being inspected.
     if (profileImg.val === dataUrl) portraitHasTransparency.val = hasAlpha;
   });
+  refreshProfileDisplay();
 }
 
 // Single entry point for removing the portrait photo - always restores
@@ -2390,6 +2518,7 @@ function resetCard() {
   });
 
   clearProfileImage();
+  halftoneEnabled.val = false;
   if (dropzoneInstance) {
     try { dropzoneInstance.removeAllFiles(true); } catch (err) { /* no files to remove */ }
   }
@@ -2407,6 +2536,23 @@ function pixelIconCheckbox() {
   });
   van.derive(() => {
     const v = pixelIconMode.val;
+    if (el.checked !== v) el.checked = v;
+  });
+  return el;
+}
+
+// Checkbox for the halftone effect toggle. Mirrors pixelIconCheckbox
+// above (kept in sync with halftoneEnabled even when it changes
+// elsewhere, e.g. RESET CARD), but also re-derives the currently
+// loaded photo on change via refreshProfileDisplay() so flipping the
+// toggle takes effect immediately rather than only on the next upload.
+function halftoneCheckbox() {
+  const el = input({
+    type: 'checkbox', checked: halftoneEnabled.val,
+    onchange: e => { halftoneEnabled.val = e.target.checked; refreshProfileDisplay(); },
+  });
+  van.derive(() => {
+    const v = halftoneEnabled.val;
     if (el.checked !== v) el.checked = v;
   });
   return el;
@@ -2441,6 +2587,10 @@ function Dialog() {
         h3({}, 'PHOTO'),
         div({ class: 'current-photo-hint' }, 'Upload a profile photo (used as the portrait image).'),
         dzContainer,
+        label({ class: 'pixel-mode-toggle' },
+          halftoneCheckbox(),
+          'Halftone photo effect (dot-screen print look)',
+        ),
       ),
 
       div({ class: 'editor-section' },
@@ -2551,6 +2701,13 @@ async function downloadCardPng(triggerBtn) {
   markUntouchedSkillsForExport(true);
   markUntouchedQuoteForExport(true);
   drawAllSickHatches();
+  // The scrolling ticker tape is a live/animated UI affordance, not
+  // part of the "portrait" look of the card - hide it just for the
+  // capture (restored in the finally block either way) rather than
+  // freezing it mid-scroll into the exported image.
+  const tickerEl = document.querySelector('.ticker-tape');
+  const prevTickerDisplay = tickerEl ? tickerEl.style.display : null;
+  if (tickerEl) tickerEl.style.display = 'none';
   // If applyMobileScale() has shrunk .paper with a CSS transform (see
   // near the bottom of this file), undo that just for the capture -
   // html2canvas should render the card at its real, full 1280px design
@@ -2583,6 +2740,7 @@ async function downloadCardPng(triggerBtn) {
   } finally {
     markUntouchedSkillsForExport(false);
     markUntouchedQuoteForExport(false);
+    if (tickerEl) tickerEl.style.display = prevTickerDisplay;
     if (hadTransform) {
       cardEl.style.transform = prevTransform;
       cardEl.style.width = prevWidth;
@@ -2664,15 +2822,19 @@ function drawSickHatch(canvasEl) {
   const ctx = canvasEl.getContext('2d');
   ctx.setTransform(scaleFactor, 0, 0, scaleFactor, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#b8b4a3';
+  // Colors and stripe proportions sampled directly from the source
+  // video's SICKNESSES panel: a light khaki base with thin, tightly
+  // spaced dark-olive diagonal lines (roughly a 2px line every 8px,
+  // not the thicker/wider-spaced stripe this used originally).
+  ctx.fillStyle = '#b6b69e';
   ctx.fillRect(0, 0, w, h);
   ctx.save();
   ctx.translate(w / 2, h / 2);
   ctx.rotate(Math.PI / 4);
   const diag = Math.sqrt(w * w + h * h);
-  ctx.fillStyle = '#3a3a3a';
-  for (let y = -diag; y < diag; y += 10) {
-    ctx.fillRect(-diag, y, diag * 2, 4);
+  ctx.fillStyle = '#1c1c14';
+  for (let y = -diag; y < diag; y += 8) {
+    ctx.fillRect(-diag, y, diag * 2, 2);
   }
   ctx.restore();
 }
