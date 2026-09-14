@@ -1819,7 +1819,7 @@ function Card() {
               SkillIcon(s),
               editableInline(span, s.name, { extraClass: 'skill-name-text', placeholder: `Skill ${i + 1}` }))),
           ),
-          editableMultiline(div, quote, { extraClass: 'quote-box' }),
+          editableMultiline(div, quote, { extraClass: 'quote-box', defaultValue: DEFAULT_QUOTE }),
         ),
       ),
     ),
@@ -1846,6 +1846,25 @@ function numberInput(state, min, max) {
   van.derive(() => {
     const v = state.val;
     if (document.activeElement !== el && Number(el.value) !== v) el.value = v;
+  });
+  return el;
+}
+
+// The QUOTE/BIO field in the dialog, built the same way as
+// numberInput() above: a plain, uncontrolled textarea whose own typing
+// is untouched, plus a derive that pulls in changes made elsewhere
+// (e.g. directly on the card's quote box) whenever this field isn't
+// the one currently focused. Every other field already followed this
+// pattern; this textarea previously didn't, which is what let it and
+// the on-card quote box drift out of sync with each other.
+function quoteTextarea(state) {
+  const el = textarea({
+    value: state.val,
+    oninput: e => { state.val = e.target.value; },
+  });
+  van.derive(() => {
+    const v = state.val;
+    if (document.activeElement !== el && el.value !== v) el.value = v;
   });
   return el;
 }
@@ -1951,13 +1970,25 @@ function editableInline(tagFn, state, opts = {}) {
 // Multi-line editable field (quote/bio): Enter is allowed to insert a
 // real line break, matching the textarea in the sidebar dialog.
 function editableMultiline(tagFn, state, opts = {}) {
-  const { extraClass = '' } = opts;
+  const { extraClass = '', defaultValue = null } = opts;
   const el = tagFn({
     class: `editable-text ${extraClass}`.trim(),
     contenteditable: 'true',
     spellcheck: 'false',
     oninput: e => { state.val = e.currentTarget.innerText; },
     onpaste: pastePlainText,
+    onfocus: e => {
+      // Clicking into the box while it still holds the untouched
+      // default/placeholder text clears it immediately, so the first
+      // character typed starts a fresh quote instead of being inserted
+      // somewhere in the middle of the default sentence (contenteditable
+      // has no separate placeholder layer like <input> does - this text
+      // is real content, so it has to be cleared explicitly).
+      if (defaultValue !== null && state.val === defaultValue) {
+        e.currentTarget.innerText = '';
+        state.val = '';
+      }
+    },
   }, state.val);
 
   van.derive(() => {
@@ -2377,10 +2408,7 @@ function Dialog() {
 
       div({ class: 'editor-section' },
         h3({}, 'QUOTE / BIO'),
-        textarea({
-          value: quote.val,
-          oninput: e => { quote.val = e.target.value; },
-        }),
+        div({ class: 'field' }, quoteTextarea(quote)),
       ),
 
       div({ class: 'editor-section danger-zone', style: 'border-bottom:none;margin-bottom:0;' },
