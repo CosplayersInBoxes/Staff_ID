@@ -140,12 +140,51 @@
   .grid {
     position: absolute;
     inset: 0;
-    padding: 3.5% 3% 2% 2%;
+    /* Bottom padding is larger than the other 3 sides (2%/3%/3.5%
+       elsewhere) specifically to reserve room for .ticker-tape, which
+       is a sibling of .grid (not inside it) positioned absolutely
+       along the very bottom edge of .card - without this, the ticker
+       bar would sit on top of (and hide) the bottom of the quote box. */
+    padding: 3.5% 3% 6% 2%;
     display: grid;
     grid-template-columns: 26% 1fr;
     grid-template-rows: auto auto 1fr;
     column-gap: 2%;
     row-gap: 1.5%;
+  }
+
+  /* ---------- TICKER TAPE ---------- */
+  .ticker-tape {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4%;
+    background: #000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+
+  .ticker-track {
+    display: inline-flex;
+    white-space: nowrap;
+    animation: ticker-scroll 32s linear infinite;
+    will-change: transform;
+  }
+
+  .ticker-segment {
+    display: inline-block;
+    padding-right: 6em;
+    color: #fff;
+    font-size: 0.8em;
+    letter-spacing: 1px;
+    white-space: pre;
+  }
+
+  @keyframes ticker-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
   }
 
   /* ---------- PORTRAIT ---------- */
@@ -1493,6 +1532,10 @@ const DEFAULT_LIFE = 6100;
 const DEFAULT_PSYCHE = 8300;
 const DEFAULT_GMP = 1500;
 const DEFAULT_QUOTE = "Enter the character's quote or bio text here.";
+// The scrolling bar at the very bottom of the card, matching the
+// gameplay-tip ticker from the actual Peace Walker Staff Management
+// screen it's modeled after.
+const DEFAULT_TICKER = 'Staff can be selected and assigned to teams. These teams will support your missions in a variety of ways. You can increase the number of staff through Fulton recoveries during missions.';
 const DEFAULT_SKILLS = [
   { icon: '⭐', name: 'Skill Name 1' },
   { icon: '⭐', name: '' },
@@ -1540,6 +1583,7 @@ const dragOverPortrait = van.state(false);
 const portraitHasTransparency = van.state(false);
 
 const quote = van.state(DEFAULT_QUOTE);
+const ticker = van.state(DEFAULT_TICKER);
 const skills = DEFAULT_SKILLS.map(v => makeSkill(v.icon, v.name));
 const sicknesses = DEFAULT_SICKNESSES.map(v => van.state(v));
 
@@ -1564,6 +1608,7 @@ function collectSerializable() {
     gmp: gmp.val,
     profileImg: profileImg.val,
     quote: quote.val,
+    ticker: ticker.val,
     pixelIconMode: pixelIconMode.val,
     skills: skills.map(s => ({ icon: s.icon.val, name: s.name.val })),
     sicknesses: sicknesses.map(s => s.val),
@@ -1607,6 +1652,7 @@ function loadSavedState() {
   if (typeof data.gmp === 'number') gmp.val = clamp(Math.round(data.gmp), 0, 999999);
   if (typeof data.profileImg === 'string') setProfileImage(data.profileImg);
   if (typeof data.quote === 'string') quote.val = data.quote;
+  if (typeof data.ticker === 'string') ticker.val = data.ticker;
   if (typeof data.pixelIconMode === 'boolean') pixelIconMode.val = data.pixelIconMode;
 
   if (Array.isArray(data.skills)) {
@@ -1758,6 +1804,26 @@ function SicknessCell(i) {
   );
 }
 
+// The scrolling black bar along the very bottom edge of the card,
+// recreated from the gameplay-tip ticker on Peace Walker's actual
+// Staff Management screen. Rendered as two back-to-back copies of the
+// same text inside a track that animates from translateX(0) to
+// translateX(-50%) - since the copies are identical, the moment the
+// first one scrolls fully offscreen the second is in exactly the
+// position the first started in, so the loop point is invisible and
+// it reads as one continuously-scrolling message rather than a
+// visible reset/jump. Both copies read reactively from the same
+// `ticker` state, so editing the text in the dialog updates both at
+// once.
+function TickerTape() {
+  return div({ class: 'ticker-tape' },
+    div({ class: 'ticker-track' },
+      span({ class: 'ticker-segment' }, () => ticker.val),
+      span({ class: 'ticker-segment' }, () => ticker.val),
+    ),
+  );
+}
+
 function Card() {
   return div({ class: 'paper' }, div({ class: 'card' },
     div({ class: 'grid' },
@@ -1823,6 +1889,7 @@ function Card() {
         ),
       ),
     ),
+    TickerTape(),
   ));
 }
 
@@ -2303,6 +2370,7 @@ function resetCard() {
   psyche.val = DEFAULT_PSYCHE;
   gmp.val = DEFAULT_GMP;
   quote.val = DEFAULT_QUOTE;
+  ticker.val = DEFAULT_TICKER;
   DEFAULT_SKILLS.forEach((v, i) => {
     if (!skills[i]) return;
     skills[i].icon.val = v.icon;
@@ -2409,6 +2477,12 @@ function Dialog() {
       div({ class: 'editor-section' },
         h3({}, 'QUOTE / BIO'),
         div({ class: 'field' }, quoteTextarea(quote)),
+      ),
+
+      div({ class: 'editor-section' },
+        h3({}, 'TICKER TAPE'),
+        div({ class: 'current-photo-hint' }, 'The scrolling message bar along the bottom of the card.'),
+        div({ class: 'field' }, quoteTextarea(ticker)),
       ),
 
       div({ class: 'editor-section danger-zone', style: 'border-bottom:none;margin-bottom:0;' },
