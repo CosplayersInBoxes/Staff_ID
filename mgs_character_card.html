@@ -278,6 +278,11 @@
     grid-template-columns: 215px 1fr;
     background: var(--dark);
     flex-grow: 1;
+    /* Draggable (see makeBarDraggable) - stops touch scrolling from
+       hijacking a drag on mobile, and hints at the interaction on
+       desktop. */
+    touch-action: none;
+    cursor: ew-resize;
   }
 
   .stat-fill {
@@ -403,6 +408,11 @@
     font-size: 1.2em;
     min-width: 2.4em;
     flex: 1 0 auto;
+    /* Draggable (see makeBarDraggable) - stops touch scrolling from
+       hijacking a drag on mobile, and hints at the interaction on
+       desktop. */
+    touch-action: none;
+    cursor: ns-resize;
   }
 
   .param-cell:nth-child(6),
@@ -477,6 +487,11 @@
     height: 80px;
     border: 1px solid #555;
     overflow: hidden;
+    /* Draggable (see makeBarDraggable) - stops touch scrolling from
+       hijacking a drag on mobile, and hints at the interaction on
+       desktop. */
+    touch-action: none;
+    cursor: ns-resize;
   }
 
   .sick-cell-hatch {
@@ -990,6 +1005,49 @@ const { div, span, button, input, textarea, h2, h3, img, canvas, a } = van.tags;
 
 // ---------- helpers ----------
 function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
+
+// Adds click-and-drag ("scrub") support to a stat/param/sickness bar,
+// for mouse, touch, and pen alike via the Pointer Events API (one code
+// path for all input types rather than separate mouse/touch handlers).
+// `orientation` is 'horizontal' (value increases left-to-right, for
+// LIFE/PSYCHE) or 'vertical' (value increases bottom-to-top, for
+// PARAMETERS/SICKNESSES, matching how those fills grow upward).
+// `onScrub` receives a 0-1 fraction already clamped to the bar's own
+// bounds; callers map that to their own value range.
+function makeBarDraggable(el, orientation, onScrub) {
+  let dragging = false;
+
+  const fractionFromEvent = e => {
+    const rect = el.getBoundingClientRect();
+    if (orientation === 'horizontal') {
+      return rect.width > 0 ? clamp((e.clientX - rect.left) / rect.width, 0, 1) : 0;
+    }
+    // Vertical bars fill from the bottom up, so "fraction full" is
+    // measured from the bottom edge, not the usual top-down y.
+    return rect.height > 0 ? clamp((rect.bottom - e.clientY) / rect.height, 0, 1) : 0;
+  };
+
+  el.addEventListener('pointerdown', e => {
+    // Let normal interaction (typing into a number input, tapping a
+    // link/button) proceed as-is instead of starting a drag over it.
+    if (e.target.closest('input, textarea, button, a, [contenteditable="true"]')) return;
+    dragging = true;
+    el.setPointerCapture(e.pointerId);
+    onScrub(fractionFromEvent(e));
+    e.preventDefault();
+  });
+  el.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    onScrub(fractionFromEvent(e));
+  });
+  const endDrag = e => {
+    if (!dragging) return;
+    dragging = false;
+    try { el.releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
+  };
+  el.addEventListener('pointerup', endDrag);
+  el.addEventListener('pointercancel', endDrag);
+}
 
 function gradeFor(pct) {
   pct = Number(pct) || 0;
@@ -1780,15 +1838,17 @@ van.derive(() => {
 // ---------- card display ----------
 
 function StatBar(labelText, valueState) {
-  return div({ class: 'stat-bar' },
+  const el = div({ class: 'stat-bar' },
     div({ class: 'stat-fill', style: () => `width:${clamp(valueState.val / 9999 * 100, 0, 100)}%` }),
     div({ class: 'stat-label' }, labelText),
     div({ class: 'stat-value' }, statNumberInput(valueState, 9999, 4)),
   );
+  makeBarDraggable(el, 'horizontal', frac => { valueState.val = clamp(Math.round(frac * 9999), 0, 9999); });
+  return el;
 }
 
 function ParamCell(p) {
-  return div({ class: () => 'param-cell' + (p.special.val ? ' special' : '') },
+  const el = div({ class: () => 'param-cell' + (p.special.val ? ' special' : '') },
     div({ class: 'param-fill', style: () => `height:${clamp(Number(p.percent.val) || 0, 0, 100)}%` }),
     ParamIcon(p),
     span({ class: 'param-grade' }, () => {
@@ -1801,6 +1861,8 @@ function ParamCell(p) {
       return p.special.val ? p.specialGrade.val : gradeFor(p.percent.val);
     }),
   );
+  makeBarDraggable(el, 'vertical', frac => { p.percent.val = clamp(Math.round(frac * 100), 0, 100); });
+  return el;
 }
 
 // One column in the SICKNESSES row. Each holds a hatch-pattern canvas
@@ -1847,11 +1909,13 @@ function SicknessCell(i) {
     });
   }
 
-  return div({ class: 'sick-cell-wrap' },
+  const wrapEl = div({ class: 'sick-cell-wrap' },
     canvasEl,
     barEl,
     iconCol,
   );
+  makeBarDraggable(wrapEl, 'vertical', frac => { state.val = clamp(Math.round(frac * 99), 0, 99); });
+  return wrapEl;
 }
 
 // The scrolling black bar along the very bottom edge of the card,
