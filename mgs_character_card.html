@@ -678,6 +678,32 @@
   }
   .discord-btn:hover { border-color: var(--orange); color: var(--orange); }
 
+  /* Same spacing pattern again, one slot further left than
+     .discord-btn - hamburger, download, Discord, Instagram. */
+  .instagram-btn {
+    position: fixed;
+    top: 24px;
+    right: 216px;
+    z-index: 1000;
+    width: 52px;
+    height: 52px;
+    background: var(--dark);
+    border: 2px solid var(--red);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .instagram-btn svg {
+    width: 28px;
+    height: 28px;
+    fill: currentColor;
+    display: block;
+  }
+  .instagram-btn:hover { border-color: var(--orange); color: var(--orange); }
+
   .editor-overlay {
     position: fixed;
     inset: 0;
@@ -2871,6 +2897,23 @@ function DiscordButton() {
   return link;
 }
 
+function InstagramButton() {
+  const link = a({
+    class: 'instagram-btn',
+    href: 'https://www.instagram.com/cosplayersinboxes/',
+    target: '_blank',
+    rel: 'noopener noreferrer',
+    'aria-label': 'Follow us on Instagram',
+    title: 'Follow us on Instagram',
+  });
+  // Same approach as DiscordButton() above: static self-authored icon
+  // inserted as raw markup, with the uploaded file's fill="#000000"
+  // dropped in favor of currentColor so .instagram-btn's color/hover
+  // rules apply to it the same way they do for the other buttons.
+  link.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="currentColor"><path d="M22.3,8.4c-0.8,0-1.4,0.6-1.4,1.4c0,0.8,0.6,1.4,1.4,1.4c0.8,0,1.4-0.6,1.4-1.4C23.7,9,23.1,8.4,22.3,8.4z"/><path d="M16,10.2c-3.3,0-5.9,2.7-5.9,5.9s2.7,5.9,5.9,5.9s5.9-2.7,5.9-5.9S19.3,10.2,16,10.2z M16,19.9c-2.1,0-3.8-1.7-3.8-3.8c0-2.1,1.7-3.8,3.8-3.8c2.1,0,3.8,1.7,3.8,3.8C19.8,18.2,18.1,19.9,16,19.9z"/><path d="M20.8,4h-9.5C7.2,4,4,7.2,4,11.2v9.5c0,4,3.2,7.2,7.2,7.2h9.5c4,0,7.2-3.2,7.2-7.2v-9.5C28,7.2,24.8,4,20.8,4z M25.7,20.8c0,2.7-2.2,5-5,5h-9.5c-2.7,0-5-2.2-5-5v-9.5c0-2.7,2.2-5,5-5h9.5c2.7,0,5,2.2,5,5V20.8z"/></svg>';
+  return link;
+}
+
 function EditorUI() {
   // Build the overlay + dialog exactly once. Toggling `dialogOpen`
   // must never recreate these nodes - Dialog() reads many fields'
@@ -2897,6 +2940,7 @@ function EditorUI() {
     }, span({}), span({}), span({})),
     DownloadButton(),
     DiscordButton(),
+    InstagramButton(),
     modalWrap,
   );
 }
