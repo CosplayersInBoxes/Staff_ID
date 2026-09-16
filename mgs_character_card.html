@@ -1648,7 +1648,7 @@ function makeParam(icon, percent, special, specialGrade, locked) {
 const DEFAULT_CODENAME = 'CODENAME';
 const DEFAULT_CLASS = 'Class';
 const DEFAULT_ROLE = 'Role';
-const DEFAULT_GENDER = 'Gender';
+const DEFAULT_PRONOUNS = 'Pronouns';
 const DEFAULT_LIFE = 6100;
 const DEFAULT_PSYCHE = 8300;
 const DEFAULT_GMP = 1500;
@@ -1693,7 +1693,7 @@ function createDefaultParams() {
 const codename = van.state(DEFAULT_CODENAME);
 const clsPart = van.state(DEFAULT_CLASS);
 const rolePart = van.state(DEFAULT_ROLE);
-const genderPart = van.state(DEFAULT_GENDER);
+const pronounsPart = van.state(DEFAULT_PRONOUNS);
 
 const life = van.state(DEFAULT_LIFE);
 const psyche = van.state(DEFAULT_PSYCHE);
@@ -1734,7 +1734,7 @@ function collectSerializable() {
     codename: codename.val,
     clsPart: clsPart.val,
     rolePart: rolePart.val,
-    genderPart: genderPart.val,
+    pronounsPart: pronounsPart.val,
     life: life.val,
     psyche: psyche.val,
     gmp: gmp.val,
@@ -1779,7 +1779,7 @@ function loadSavedState() {
   if (typeof data.codename === 'string') codename.val = data.codename;
   if (typeof data.clsPart === 'string') clsPart.val = data.clsPart;
   if (typeof data.rolePart === 'string') rolePart.val = data.rolePart;
-  if (typeof data.genderPart === 'string') genderPart.val = data.genderPart;
+  if (typeof data.pronounsPart === 'string') pronounsPart.val = data.pronounsPart;
   if (typeof data.life === 'number') life.val = clamp(Math.round(data.life), 0, 9999);
   if (typeof data.psyche === 'number') psyche.val = clamp(Math.round(data.psyche), 0, 9999);
   if (typeof data.gmp === 'number') gmp.val = clamp(Math.round(data.gmp), 0, 999999);
@@ -1990,7 +1990,7 @@ function Card() {
           ' / ',
           editableInline(span, rolePart),
           ' / ',
-          editableInline(span, genderPart),
+          editableInline(span, pronounsPart),
         ),
         div({ class: 'stats-row' },
           div({ class: 'stat-bars' },
@@ -2136,7 +2136,7 @@ function pastePlainText(e) {
   document.execCommand('insertText', false, text);
 }
 
-// Single-line editable field (codename, class/role/gender, skills):
+// Single-line editable field (codename, class/role/pronouns, skills):
 // Enter confirms/blurs rather than inserting a line break, and pasted
 // content is flattened to plain text on one line.
 function editableInline(tagFn, state, opts = {}) {
@@ -2610,7 +2610,7 @@ function resetCard() {
   codename.val = DEFAULT_CODENAME;
   clsPart.val = DEFAULT_CLASS;
   rolePart.val = DEFAULT_ROLE;
-  genderPart.val = DEFAULT_GENDER;
+  pronounsPart.val = DEFAULT_PRONOUNS;
   life.val = DEFAULT_LIFE;
   psyche.val = DEFAULT_PSYCHE;
   gmp.val = DEFAULT_GMP;
@@ -2689,13 +2689,13 @@ function Dialog() {
         h3({}, 'IDENTITY'),
         Field('Codename', textInput(codename)),
         div({ class: 'field' },
-          div({}, 'Class / Role / Gender'),
+          div({}, 'Class / Role / Pronouns'),
           div({ class: 'subtitle-row' },
             textInput(clsPart),
             span({ class: 'slash' }, '/'),
             textInput(rolePart),
             span({ class: 'slash' }, '/'),
-            textInput(genderPart),
+            textInput(pronounsPart),
           ),
         ),
       ),
