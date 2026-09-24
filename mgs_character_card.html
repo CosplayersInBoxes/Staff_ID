@@ -1953,8 +1953,9 @@ function SicknessCell(i) {
 // position the first started in, so the loop point is invisible and
 // it reads as one continuously-scrolling message rather than a
 // visible reset/jump. Both copies read reactively from the same
-// `ticker` state, so editing the text in the dialog updates both at
-// once.
+// `ticker` state (fixed at DEFAULT_TICKER - there's no dialog field
+// for it, so it isn't user-editable), so if that state ever changes
+// both copies update together.
 function TickerTape() {
   return div({ class: 'ticker-tape' },
     div({ class: 'ticker-track' },
@@ -2744,12 +2745,6 @@ function Dialog() {
       div({ class: 'editor-section' },
         h3({}, 'QUOTE / BIO'),
         div({ class: 'field' }, quoteTextarea(quote)),
-      ),
-
-      div({ class: 'editor-section' },
-        h3({}, 'TICKER TAPE'),
-        div({ class: 'current-photo-hint' }, 'The scrolling message bar along the bottom of the card.'),
-        div({ class: 'field' }, quoteTextarea(ticker)),
       ),
 
       div({ class: 'editor-section danger-zone', style: 'border-bottom:none;margin-bottom:0;' },
