@@ -890,6 +890,14 @@
     align-items: center;
     gap: 3px;
   }
+  .param-edit-row .param-name-lbl {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #fff;
+    margin-left: 6px;
+    white-space: nowrap;
+    user-select: none;
+  }
   .param-edit-row .remove-param {
     background: none;
     border: 1px solid #772222;
@@ -1373,6 +1381,27 @@ const PIXEL_ICONS = {
 // "mood" readout rather than a fixed glyph. MORALE_ICON_EMOJI is the
 // emoji that triggers this behavior in ParamIcon below.
 const MORALE_ICON_EMOJI = '🙌';
+
+// Display-only names shown next to each parameter's icon in the
+// hamburger-menu editor (see ParamEditRow below). Purely a label for
+// the person editing the card - it plays no part in scoring, export,
+// or the on-card display, and isn't itself editable.
+const PARAM_ICON_NAMES = {
+  '⚔️': 'Combat',
+  '🔧': 'R&D',
+  '🍴': 'Mess Hall',
+  '💊': 'Medical',
+  '📊': 'Intel',
+  '🎯': 'Shoot',
+  '🔄': 'Reload',
+  '💣': 'Throw',
+  '⛓': 'Place',
+  '🚶': 'Walk',
+  '🏃': 'Run',
+  '✊': 'Fight',
+  '🛡️': 'Defense',
+  '🙌': 'Morale',
+};
 
 // Fixed icon for the first sickness column ("Hostility"). Unlike skill
 // icons, this isn't user-editable - it's a constant identifier for
@@ -2265,11 +2294,20 @@ function ParamEditRow(p, onRemove) {
       return p.special.val ? '' : gradeFor(p.percent.val);
     }),
     () => {
+      // Static, uneditable name for whatever icon this row currently
+      // holds (e.g. '🚶' -> "Walk"), purely so the person editing the
+      // card can tell parameters apart at a glance. Recomputed here
+      // since p.icon.val is itself editable text.
+      const title = PARAM_ICON_NAMES[p.icon.val] || '';
       // Every parameter except Morale keeps the "special" checkbox
       // (and, when checked, a free-text character to show instead of
       // the letter grade). Morale's rank is fully automatic from its
-      // percentage, so it gets no checkbox at all.
-      if (p.icon.val === MORALE_ICON_EMOJI) return '';
+      // percentage, so it gets no checkbox at all - just the name.
+      if (p.icon.val === MORALE_ICON_EMOJI) {
+        return div({ style: 'display:flex;align-items:center;' },
+          span({ class: 'param-name-lbl' }, title),
+        );
+      }
       return div({ style: 'display:flex;flex-direction:column;gap:2px;' },
         label({ class: 'special-lbl' },
           input({
@@ -2277,6 +2315,7 @@ function ParamEditRow(p, onRemove) {
             onchange: e => { p.special.val = e.target.checked; },
           }),
           'special',
+          span({ class: 'param-name-lbl' }, title),
         ),
         () => p.special.val ? input({
           type: 'text', value: p.specialGrade.val, maxlength: 3,
