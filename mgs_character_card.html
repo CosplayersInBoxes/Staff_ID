@@ -1070,7 +1070,7 @@
 <div id="app"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/modern-screenshot@4.7.0/dist/index.js"></script>
 <script type="module">
 import van from 'https://cdn.jsdelivr.net/gh/vanjs-org/van/public/van-1.6.0.min.js';
 
@@ -2964,8 +2964,8 @@ function markUntouchedQuoteForExport(hide) {
 
 async function downloadCardPng(triggerBtn) {
   const cardEl = document.querySelector('.paper');
-  if (!cardEl || typeof html2canvas !== 'function') {
-    console.error('html2canvas not available or .paper not found');
+  if (!cardEl || typeof modernScreenshot === 'undefined') {
+    console.error('modern-screenshot not available or .paper not found');
     return;
   }
   if (triggerBtn) triggerBtn.disabled = true;
@@ -2981,7 +2981,7 @@ async function downloadCardPng(triggerBtn) {
   if (tickerEl) tickerEl.style.display = 'none';
   // If applyMobileScale() has shrunk .paper with a CSS transform (see
   // near the bottom of this file), undo that just for the capture -
-  // html2canvas should render the card at its real, full 1280px design
+  // the screenshot should render the card at its real, full 1280px design
   // resolution regardless of how small the phone screen it's being
   // exported from is. Restored in the finally block either way.
   const hadTransform = !!cardEl.style.transform;
@@ -2994,10 +2994,16 @@ async function downloadCardPng(triggerBtn) {
     cardEl.style.maxWidth = 'none';
   }
   try {
-    const canvas = await html2canvas(cardEl, {
-      backgroundColor: null,
+    const canvas = await modernScreenshot.domToCanvas(cardEl, {
       scale: 2,
-      useCORS: true,
+      // The LIFE/PSYCHE/GMP+ values are <input type="number">, and the
+      // ::-webkit-inner-spin-button rule that hides their spinner isn't
+      // carried into the screenshot's clone (only computed styles are),
+      // so the spinner would eat width and clip the last digit. Plain
+      // text inputs have no spinner; only the clone is changed.
+      onCloneEachNode: (node) => {
+        if (node instanceof HTMLInputElement && node.type === 'number') node.type = 'text';
+      },
     });
     const dataUrl = canvas.toDataURL('image/png');
     const link = document.createElement('a');
