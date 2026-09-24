@@ -1006,6 +1006,47 @@
   .quote-box.export-hide-quote-text {
     color: transparent !important;
   }
+  /* ---------- CLASS FIELD PRESET DROPDOWN ---------- */
+  .class-field-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  .class-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 0.3em;
+    min-width: 12em;
+    max-height: 14em;
+    overflow-y: auto;
+    background: var(--dark);
+    border: 1px solid var(--orange);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    z-index: 20;
+    flex-direction: column;
+    padding: 0.25em 0;
+  }
+  .class-dropdown.open {
+    display: flex;
+  }
+  .class-dropdown-item {
+    all: unset;
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.4em 0.8em;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.7em;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+  .class-dropdown-item:hover,
+  .class-dropdown-item:focus {
+    background: var(--red);
+  }
+
   /* light-on-dark fields (skills, quote) get a lighter hover/focus tint */
   .skills-box .editable-text:hover,
   .quote-box.editable-text:hover {
@@ -1724,6 +1765,19 @@ const clsPart = van.state(DEFAULT_CLASS);
 const rolePart = van.state(DEFAULT_ROLE);
 const pronounsPart = van.state(DEFAULT_PRONOUNS);
 
+// Preset options offered in the dropdowns attached to the class, role,
+// pronouns, and skill fields (see
+// ClassField()/RoleField()/PronounsField()/SkillField()) - the fields
+// stay free-text, this is just a shortcut for the common choices. Only
+// one dropdown can be open at a time, tracked by which field's key
+// ('class'/'role'/'pronouns'/'skill-0'..'skill-3') this holds, or null
+// when none are open.
+const CLASS_PRESETS = ['Tactical Cosplayer', 'Artist', 'Photographer', 'Infantry', 'Sharpshooter', 'Commando', 'Scout', 'Guerrilla', 'Elite Commando', 'Mechanic', 'Researcher', 'Doctor', 'Nurse', 'Cook', 'Medic', 'Engineer', 'Supply Soldier', 'Industrial Spy', 'Spy', 'Food Technician', 'Nutritionist', 'Medical Researcher', 'Commander', 'Actress', 'New Voice Actor'];
+const ROLE_PRESETS = ['Military Soldier', 'Volunteer Soldier', 'Former Prisoner', 'Commanding Officer'];
+const PRONOUNS_PRESETS = ['He/Him', 'She/Her', 'They/Them'];
+const SKILL_PRESETS = ['SWAT', 'Channeler', 'Sidekick', 'Gung Ho', 'Decoy', 'Pro Wrestling Maniac', 'Green Beret', 'Radio Technology', 'Engineering', 'Voice Actor', 'Rescuer', 'Surgeon', 'Pharmacist', 'Expert Pharmacist', 'Porter', 'Athlete', 'Food Technician', 'Nutritionist', 'Medical Researcher', 'Commander', 'Actress', 'New Voice Actor'];
+const openPresetDropdown = van.state(null);
+
 const life = van.state(DEFAULT_LIFE);
 const psyche = van.state(DEFAULT_PSYCHE);
 const gmp = van.state(DEFAULT_GMP);
@@ -2016,11 +2070,11 @@ function Card() {
       div({ class: 'header-col' },
         div({ class: 'codename' }, editableInline(span, codename)),
         div({ class: 'subtitle' },
-          editableInline(span, clsPart),
+          ClassField(),
           ' / ',
-          editableInline(span, rolePart),
+          RoleField(),
           ' / ',
-          editableInline(span, pronounsPart),
+          PronounsField(),
         ),
         div({ class: 'stats-row' },
           div({ class: 'stat-bars' },
@@ -2053,7 +2107,7 @@ function Card() {
           div({ class: 'skills-list' },
             ...skills.map((s, i) => div({ class: 'skill-slot' },
               SkillIcon(s),
-              editableInline(span, s.name, { extraClass: 'skill-name-text', placeholder: `Skill ${i + 1}` }))),
+              SkillField(s, i))),
           ),
           editableMultiline(div, quote, { extraClass: 'quote-box', defaultValue: DEFAULT_QUOTE }),
         ),
@@ -2203,6 +2257,72 @@ function editableInline(tagFn, state, opts = {}) {
 
   return el;
 }
+
+// Editable-text field on the card with a small preset dropdown attached
+// (used for the class, role, pronouns, and skill fields - see
+// ClassField()/RoleField()/PronounsField()/SkillField()). Clicking
+// (really, focusing) the box opens the dropdown; picking a preset fills
+// the box and closes it, while typing directly still works exactly as
+// before. `key` identifies this field in openPresetDropdown so opening
+// one field's dropdown closes any other that's open. `opts.extraClass`
+// and `opts.textEl` (an already-built element to wrap, e.g. a skill's
+// SkillIcon-paired editableInline) let callers with their own field
+// element reuse the same dropdown wiring instead of building a plain one.
+function presetField(state, presets, key, placeholder, opts = {}) {
+  const el = opts.textEl || editableInline(span, state, { placeholder, extraClass: opts.extraClass });
+  el.addEventListener('focus', () => { openPresetDropdown.val = key; });
+
+  const wrap = span(
+    { class: 'class-field-wrap' },
+    el,
+    div(
+      { class: () => 'class-dropdown' + (openPresetDropdown.val === key ? ' open' : '') },
+      ...presets.map(preset => button({
+        type: 'button',
+        class: 'class-dropdown-item',
+        onclick: () => {
+          state.val = preset;
+          // editableInline's own van.derive skips syncing while the box
+          // is focused - it just lost focus to this button, so update
+          // the visible text directly rather than waiting on that.
+          el.textContent = preset;
+          openPresetDropdown.val = null;
+        },
+      }, preset)),
+    ),
+  );
+  return wrap;
+}
+
+function ClassField() {
+  return presetField(clsPart, CLASS_PRESETS, 'class', 'Class');
+}
+
+function RoleField() {
+  return presetField(rolePart, ROLE_PRESETS, 'role', 'Role');
+}
+
+function PronounsField() {
+  return presetField(pronounsPart, PRONOUNS_PRESETS, 'pronouns', 'Pronouns');
+}
+
+// One skill slot's name field on the card, with the same preset
+// dropdown as class/role/pronouns. Each of the 4 skill slots gets its
+// own key ('skill-0'..'skill-3') so opening one only closes the others,
+// same as any other field.
+function SkillField(s, i) {
+  const el = editableInline(span, s.name, { extraClass: 'skill-name-text', placeholder: `Skill ${i + 1}` });
+  return presetField(s.name, SKILL_PRESETS, `skill-${i}`, `Skill ${i + 1}`, { textEl: el });
+}
+
+// Closes any open preset dropdown on a click outside every field - covers
+// clicking elsewhere on the card, in the sidebar, or blurring without
+// picking a preset. mousedown (not click) so it fires before a new
+// focus target steals focus from the field.
+document.addEventListener('mousedown', e => {
+  if (e.target.closest('.class-field-wrap')) return;
+  openPresetDropdown.val = null;
+});
 
 // Multi-line editable field (quote/bio): Enter is allowed to insert a
 // real line break, matching the textarea in the sidebar dialog.
@@ -2761,7 +2881,7 @@ function Dialog() {
         h3({}, 'PARAMETERS'),
         label({ class: 'pixel-mode-toggle' },
           pixelIconCheckbox(),
-          'Use pixel-art icons instead of emoji',
+          'Use Peace Walker icons instead of Emojis',
         ),
         ParamsEditorSection(),
       ),
