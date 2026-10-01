@@ -215,6 +215,8 @@
     filter: grayscale(100%) contrast(1.1);
   }
 
+  .portrait { cursor: pointer; }
+
   .portrait.drag-over {
     outline: 3px dashed var(--orange);
     outline-offset: -6px;
@@ -2120,6 +2122,7 @@ function Card() {
           style: () => profileImgDisplay.val ? `background-image:url(${profileImgDisplay.val})` : '',
           ondragover: e => { e.preventDefault(); dragOverPortrait.val = true; },
           ondragleave: () => { dragOverPortrait.val = false; },
+          onclick: () => openPortraitPicker(),
           ondrop: e => {
             e.preventDefault();
             dragOverPortrait.val = false;
@@ -2778,6 +2781,28 @@ function setProfileImage(dataUrl) {
 // the dark photo box alongside clearing the image itself.
 function clearProfileImage() {
   setProfileImage(null);
+}
+
+// Hidden <input type=file> behind the portrait box. Clicking the portrait
+// opens the device's file/photo picker (photo library, camera roll, or
+// file storage depending on the platform); the chosen image goes through
+// the same loadImageFile() path as drag-and-drop and the editor dropzone.
+let portraitFileInput = null;
+function openPortraitPicker() {
+  if (!portraitFileInput) {
+    portraitFileInput = document.createElement('input');
+    portraitFileInput.type = 'file';
+    portraitFileInput.accept = 'image/*';
+    portraitFileInput.style.display = 'none';
+    portraitFileInput.addEventListener('change', () => {
+      const file = portraitFileInput.files && portraitFileInput.files[0];
+      loadImageFile(file);
+      // Clear so picking the same file again still fires 'change'.
+      portraitFileInput.value = '';
+    });
+    document.body.appendChild(portraitFileInput);
+  }
+  portraitFileInput.click();
 }
 
 // Shared by the sidebar dropzone widget and drag-and-drop directly
