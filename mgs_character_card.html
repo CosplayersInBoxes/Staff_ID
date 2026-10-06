@@ -1976,19 +1976,34 @@ function loadSavedState() {
 
 let saveTimer = null;
 function persistNow() {
+  clearTimeout(saveTimer);
+  const data = collectSerializable();
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(collectSerializable()));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (err) {
     // Most commonly a QuotaExceededError - the profile photo is stored
-    // as a base64 data URL and can be large. We skip saving rather than
-    // interrupting the user with an error.
-    console.warn('Could not save character card to localStorage:', err);
+    // as a base64 data URL and can be large. Rather than losing every
+    // other edit, retry without the photo so text/stat changes still stick.
+    console.warn('Could not save full card (photo too large?); retrying without photo:', err);
+    try {
+      data.profileImg = null;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (err2) {
+      console.warn('Could not save character card to localStorage:', err2);
+    }
   }
 }
 function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(persistNow, 300);
 }
+
+// Flush any pending debounced save when the page is hidden or closed, so
+// a change made in the last 300ms before refreshing/leaving isn't lost.
+window.addEventListener('pagehide', persistNow);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') persistNow();
+});
 
 // Restore any previously-saved entries before the card is first built,
 // so the initial render already reflects them.
