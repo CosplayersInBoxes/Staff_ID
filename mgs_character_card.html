@@ -1777,6 +1777,9 @@ function makeParam(icon, percent, special, specialGrade, locked) {
 
 // ---------- state ----------
 const DEFAULT_CODENAME = 'CODENAME';
+// Max characters that fit on the card at the current font/size.
+const CODENAME_MAX = 32;
+const SKILL_NAME_MAX = 44;
 const DEFAULT_CLASS = 'Class';
 const DEFAULT_ROLE = 'Role';
 const DEFAULT_PRONOUNS = 'Pronouns';
@@ -1920,7 +1923,7 @@ function loadSavedState() {
   }
   if (!data || typeof data !== 'object') return;
 
-  if (typeof data.codename === 'string') codename.val = data.codename;
+  if (typeof data.codename === 'string') codename.val = data.codename.slice(0, CODENAME_MAX);
   if (typeof data.clsPart === 'string') clsPart.val = data.clsPart;
   if (typeof data.rolePart === 'string') rolePart.val = data.rolePart;
   if (typeof data.pronounsPart === 'string') pronounsPart.val = data.pronounsPart;
@@ -1939,7 +1942,7 @@ function loadSavedState() {
       if (val && typeof val === 'object') {
         // Current format: separate icon + name fields.
         if (typeof val.icon === 'string') skills[i].icon.val = val.icon;
-        if (typeof val.name === 'string') skills[i].name.val = val.name;
+        if (typeof val.name === 'string') skills[i].name.val = val.name.slice(0, SKILL_NAME_MAX);
       } else if (typeof val === 'string') {
         // Back-compat: older saves stored one combined string (e.g.
         // "⭐ Skill Name"). Best-effort split on the first space so
@@ -1947,10 +1950,10 @@ function loadSavedState() {
         const spaceIdx = val.indexOf(' ');
         if (spaceIdx === -1) {
           skills[i].icon.val = '';
-          skills[i].name.val = val;
+          skills[i].name.val = val.slice(0, SKILL_NAME_MAX);
         } else {
           skills[i].icon.val = val.slice(0, spaceIdx);
-          skills[i].name.val = val.slice(spaceIdx + 1);
+          skills[i].name.val = val.slice(spaceIdx + 1).slice(0, SKILL_NAME_MAX);
         }
       }
     });
@@ -2148,7 +2151,7 @@ function Card() {
       ),
 
       div({ class: 'header-col' },
-        div({ class: 'codename' }, editableInline(span, codename)),
+        div({ class: 'codename' }, editableInline(span, codename, { maxLen: CODENAME_MAX })),
         div({ class: 'subtitle' },
           ClassField(),
           ' / ',
@@ -2277,11 +2280,12 @@ function statNumberInput(state, max, padLength) {
   return el;
 }
 
-function textInput(state, placeholder) {
+function textInput(state, placeholder, maxLen) {
   const el = input({
     type: 'text', value: state.val, placeholder: placeholder || '',
     oninput: e => { state.val = e.target.value; },
   });
+  if (maxLen) el.maxLength = maxLen;
   van.derive(() => {
     const v = state.val;
     if (document.activeElement !== el && el.value !== v) el.value = v;
@@ -2304,13 +2308,31 @@ function pastePlainText(e) {
 // Enter confirms/blurs rather than inserting a line break, and pasted
 // content is flattened to plain text on one line.
 function editableInline(tagFn, state, opts = {}) {
-  const { extraClass = '', placeholder = '' } = opts;
+  const { extraClass = '', placeholder = '', maxLen = 0 } = opts;
+  // Trim to maxLen (if set) and keep the caret at the end.
+  const enforceMax = node => {
+    if (!maxLen || node.textContent.length <= maxLen) return;
+    node.textContent = node.textContent.slice(0, maxLen);
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  };
   const el = tagFn({
     class: `editable-text ${extraClass}`.trim(),
     contenteditable: 'true',
     spellcheck: 'false',
     'data-placeholder': placeholder,
-    oninput: e => { state.val = e.currentTarget.textContent; },
+    // Block typed characters once full (unless replacing a selection).
+    onbeforeinput: e => {
+      if (!maxLen || !e.data || e.inputType === 'insertFromPaste') return;
+      const sel = window.getSelection();
+      const selected = sel && el.contains(sel.anchorNode) ? sel.toString().length : 0;
+      if (el.textContent.length - selected + e.data.length > maxLen) e.preventDefault();
+    },
+    oninput: e => { enforceMax(e.currentTarget); state.val = e.currentTarget.textContent; },
     onkeydown: e => {
       if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
     },
@@ -2321,6 +2343,7 @@ function editableInline(tagFn, state, opts = {}) {
       setTimeout(() => {
         const flat = el.textContent.replace(/[\r\n]+/g, ' ');
         if (flat !== el.textContent) el.textContent = flat;
+        enforceMax(el);
         state.val = el.textContent;
       }, 0);
     },
@@ -2391,7 +2414,7 @@ function PronounsField() {
 // own key ('skill-0'..'skill-3') so opening one only closes the others,
 // same as any other field.
 function SkillField(s, i) {
-  const el = editableInline(span, s.name, { extraClass: 'skill-name-text', placeholder: `Skill ${i + 1}` });
+  const el = editableInline(span, s.name, { extraClass: 'skill-name-text', placeholder: `Skill ${i + 1}`, maxLen: SKILL_NAME_MAX });
   return presetField(s.name, SKILL_PRESETS, `skill-${i}`, `Skill ${i + 1}`, { textEl: el });
 }
 
@@ -2445,7 +2468,7 @@ function SkillEditRow(s, i) {
   const iconInput = textInput(s.icon, '⭐');
   iconInput.maxLength = 4;
   iconInput.setAttribute('aria-label', `Skill ${i + 1} icon`);
-  const nameInput = textInput(s.name, `Skill ${i + 1}`);
+  const nameInput = textInput(s.name, `Skill ${i + 1}`, SKILL_NAME_MAX);
   nameInput.setAttribute('aria-label', `Skill ${i + 1} name`);
   return div({ class: 'skill-edit-row' }, iconInput, nameInput);
 }
@@ -2949,7 +2972,7 @@ function Dialog() {
 
       div({ class: 'editor-section' },
         h3({}, 'IDENTITY'),
-        Field('Codename', textInput(codename)),
+        Field('Codename', textInput(codename, '', CODENAME_MAX)),
         div({ class: 'field' },
           div({}, 'Class / Role / Pronouns'),
           div({ class: 'subtitle-row' },
