@@ -908,6 +908,17 @@
     margin-left: auto;
   }
   .param-edit-row .remove-param:hover { border-color: var(--red); color: var(--red); }
+  .param-edit-row .param-permanent-icon {
+    width: 24px;
+    height: 24px;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    opacity: 0.5;
+    cursor: default;
+  }
 
   .skill-edit-row {
     display: flex;
@@ -1759,7 +1770,7 @@ function makeSkill(icon, name) {
   };
 }
 
-function makeParam(icon, percent, special, specialGrade, locked) {
+function makeParam(icon, percent, special, specialGrade, locked, permanent) {
   return {
     icon: van.state(icon),
     percent: van.state(percent),
@@ -1769,6 +1780,10 @@ function makeParam(icon, percent, special, specialGrade, locked) {
     // the list is fixed. It's fixed per-param for its whole lifetime,
     // never toggled at runtime, so it doesn't need to be a van.state.
     locked: !!locked,
+    // Plain flag: a permanent parameter (Morale) has no remove button
+    // and a read-only icon, so it can never be deleted or renamed away.
+    // Morale's icon also counts as permanent for back-compat with older saves.
+    permanent: !!permanent || icon === MORALE_ICON_EMOJI,
   };
 }
 
@@ -1815,7 +1830,7 @@ function createDefaultParams() {
     makeParam('🏃', 20), // Run
     makeParam('✊', 10), // Fight
     makeParam('🛡️', 20), // Defense
-    makeParam('🙌', 100, true, '⇈'), // Morale
+    makeParam('🙌', 100, true, '⇈', false, true), // Morale - permanent
     // The 4 sickness columns (Hostility, Sick, Wounded, PTSD) live
     // separately - see SICKNESS_ICONS/SicknessCell below.
   ];
@@ -1895,6 +1910,7 @@ function collectSerializable() {
       special: p.special.val,
       specialGrade: p.specialGrade.val,
       locked: p.locked,
+      permanent: p.permanent,
     })),
   };
 }
@@ -1963,7 +1979,12 @@ function loadSavedState() {
       !!p.special,
       typeof p.specialGrade === 'string' ? p.specialGrade : 'S',
       !!p.locked,
+      !!p.permanent,
     ));
+    // Safety net: if an older/edited save somehow lacks Morale, restore it.
+    if (!paramsList.val.some(p => p.permanent)) {
+      paramsList.val = [...paramsList.val, makeParam(MORALE_ICON_EMOJI, 100, true, '\u21c8', false, true)];
+    }
   }
 
   if (Array.isArray(data.sicknesses)) {
@@ -2497,6 +2518,8 @@ function ParamEditRow(p, onRemove) {
         }, '\u283f'),
     input({
       type: 'text', value: p.icon.val, maxlength: 4,
+      readOnly: p.permanent,
+      title: p.permanent ? "This parameter can't be changed or removed" : '',
       oninput: e => { p.icon.val = e.target.value; },
     }),
     input({
@@ -2544,10 +2567,12 @@ function ParamEditRow(p, onRemove) {
         }) : '',
       );
     },
-    button({
-      class: 'remove-param',
-      onclick: onRemove,
-    }, '\u2715'),
+    p.permanent
+      ? span({ class: 'param-permanent-icon', title: "This parameter can't be removed" }, '\u{1F512}')
+      : button({
+          class: 'remove-param',
+          onclick: onRemove,
+        }, '\u2715'),
   );
 
   // Locked rows accept no drops at all - with no ondragover handler,
@@ -2618,6 +2643,7 @@ function ParamsEditorSection() {
 
   function addRow(p) {
     const rowEl = ParamEditRow(p, () => {
+      if (p.permanent) return;
       paramsList.val = paramsList.val.filter(item => item !== p);
       const el = rowElByParam.get(p);
       if (el) { el.remove(); rowElByParam.delete(p); }
