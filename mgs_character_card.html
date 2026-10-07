@@ -204,14 +204,11 @@
     background-position: center center;
   }
 
-  /* Plain grayscale applies to the default silhouette placeholder
-     (before any photo is uploaded) AND to an uploaded photo when the
-     halftone effect is off (the default) - .has-photo.halftone-on is
-     the only case that skips this, since applyHalftoneEffect() has
-     already baked its own duotone coloring into that image and
-     filtering it again would double up the effect. */
-  .portrait:not(.has-photo),
-  .portrait.has-photo:not(.halftone-on) {
+  /* Grayscale applies only to the default silhouette placeholder
+     (before any photo is uploaded). An uploaded photo keeps its
+     original colors when the halftone effect is off; with halftone on,
+     applyHalftoneEffect() bakes its own duotone coloring into the image. */
+  .portrait:not(.has-photo) {
     filter: grayscale(100%) contrast(1.1);
   }
 
