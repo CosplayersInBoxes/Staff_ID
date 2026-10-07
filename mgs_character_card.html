@@ -2154,6 +2154,7 @@ function Card() {
 
       div({ class: 'portrait-col' },
         div({
+          'data-tip': () => profileImgDisplay.val ? 'Click To Change Profile Image' : 'Click To Add Profile Image',
           class: () => 'portrait' + (dragOverPortrait.val ? ' drag-over' : '') + (portraitHasTransparency.val ? ' has-transparency' : '') + (profileImgDisplay.val ? ' has-photo' : '') + (halftoneEnabled.val ? ' halftone-on' : ''),
           style: () => profileImgDisplay.val ? `background-image:url(${profileImgDisplay.val})` : '',
           ondragover: e => { e.preventDefault(); dragOverPortrait.val = true; },
