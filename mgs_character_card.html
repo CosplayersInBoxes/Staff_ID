@@ -976,6 +976,7 @@
     letter-spacing: 1px;
   }
   .add-param-btn:hover { border-color: var(--orange); color: var(--orange); }
+  .add-param-btn:disabled { opacity: 0.4; cursor: not-allowed; border-color: inherit; color: inherit; }
 
   #profile-dropzone.dropzone {
     border: 2px dashed #666;
@@ -1898,6 +1899,11 @@ const DEFAULT_SKILLS = [
 // no separate on/off flag, since 0 unambiguously means "off".
 const DEFAULT_SICKNESSES = [0, 0, 0, 0];
 
+// Hard cap on parameter slots (not counting Morale, which is separate).
+// Matches the 13 default slots, which is how many fit on the card.
+const MAX_PARAM_SLOTS = 13;
+const paramSlotCount = () => paramsList.val.filter(p => !p.permanent).length;
+
 function createDefaultParams() {
   return [
     makeParam('⚔️', 20, false, 'S', true), // Combat - locked
@@ -2071,6 +2077,11 @@ function loadSavedState() {
       !!p.permanent,
       !!p.vacant,
     ));
+    // Enforce the slot cap on loaded data (Morale is exempt).
+    {
+      let seen = 0;
+      paramsList.val = paramsList.val.filter(p => p.permanent || ++seen <= MAX_PARAM_SLOTS);
+    }
     // Safety net: if an older/edited save somehow lacks Morale, restore it.
     if (!paramsList.val.some(p => p.permanent)) {
       paramsList.val = [...paramsList.val, makeParam(MORALE_ICON_EMOJI, 100, true, '\u21c8', false, true)];
@@ -2782,6 +2793,10 @@ function ParamsEditorSection() {
     rowsContainer,
     button({
       class: 'add-param-btn',
+      // Full when every slot is taken and the cap is reached.
+      disabled: () => !paramsList.val.some(item => item.vacant) && paramSlotCount() >= MAX_PARAM_SLOTS,
+      title: () => (!paramsList.val.some(item => item.vacant) && paramSlotCount() >= MAX_PARAM_SLOTS)
+        ? `Maximum of ${MAX_PARAM_SLOTS} parameters reached - delete one to add another` : '',
       onclick: () => {
         const slot = paramsList.val.findIndex(item => item.vacant);
         if (slot !== -1) {
@@ -2792,6 +2807,7 @@ function ParamsEditorSection() {
           rebuildAll();
           return;
         }
+        if (paramSlotCount() >= MAX_PARAM_SLOTS) return;
         const p = makeParam('\u2753', 50);
         paramsList.val = [...paramsList.val, p];
         addRow(p);
