@@ -1876,6 +1876,7 @@ const DEFAULT_CODENAME = 'CODENAME';
 // Max characters that fit on the card at the current font/size.
 const CODENAME_MAX = 32;
 const SKILL_NAME_MAX = 44;
+const QUOTE_MAX = 455; // quote/bio box
 const DEFAULT_CLASS = 'Class';
 const DEFAULT_ROLE = 'Role';
 const DEFAULT_PRONOUNS = 'Pronouns';
@@ -2035,7 +2036,7 @@ function loadSavedState() {
   if (typeof data.gmp === 'number') gmp.val = clamp(Math.round(data.gmp), 0, 999999);
   if (typeof data.halftoneEnabled === 'boolean') halftoneEnabled.val = data.halftoneEnabled;
   if (typeof data.profileImg === 'string') setProfileImage(data.profileImg);
-  if (typeof data.quote === 'string') quote.val = data.quote;
+  if (typeof data.quote === 'string') quote.val = data.quote.slice(0, QUOTE_MAX);
   if (typeof data.ticker === 'string') ticker.val = data.ticker;
   if (typeof data.pixelIconMode === 'boolean') pixelIconMode.val = data.pixelIconMode;
 
@@ -2318,7 +2319,7 @@ function Card() {
               SkillIcon(s),
               SkillField(s, i))),
           ),
-          editableMultiline(div, quote, { extraClass: 'quote-box', defaultValue: DEFAULT_QUOTE }),
+          editableMultiline(div, quote, { extraClass: 'quote-box', defaultValue: DEFAULT_QUOTE, maxLen: QUOTE_MAX }),
         ),
       ),
     ),
@@ -2360,6 +2361,7 @@ function numberInput(state, min, max) {
 function quoteTextarea(state) {
   const el = textarea({
     value: state.val,
+    maxlength: QUOTE_MAX,
     oninput: e => { state.val = e.target.value; },
   });
   van.derive(() => {
@@ -2556,12 +2558,33 @@ document.addEventListener('mousedown', e => {
 // Multi-line editable field (quote/bio): Enter is allowed to insert a
 // real line break, matching the textarea in the sidebar dialog.
 function editableMultiline(tagFn, state, opts = {}) {
-  const { extraClass = '', defaultValue = null } = opts;
+  const { extraClass = '', defaultValue = null, maxLen = 0 } = opts;
+  // Trim to maxLen (if set) and keep the caret at the end.
+  const enforceMax = node => {
+    if (!maxLen || node.innerText.length <= maxLen) return;
+    node.innerText = node.innerText.slice(0, maxLen);
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  };
   const el = tagFn({
     class: `editable-text ${extraClass}`.trim(),
     contenteditable: 'true',
     spellcheck: 'false',
-    oninput: e => { state.val = e.currentTarget.innerText; },
+    // Block typed characters/line breaks once full (unless replacing a
+    // selection); pasted text is trimmed in oninput below.
+    onbeforeinput: e => {
+      if (!maxLen || e.inputType === 'insertFromPaste') return;
+      const adds = e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak' ? 1 : (e.data ? e.data.length : 0);
+      if (!adds) return;
+      const sel = window.getSelection();
+      const selected = sel && el.contains(sel.anchorNode) ? sel.toString().length : 0;
+      if (el.innerText.length - selected + adds > maxLen) e.preventDefault();
+    },
+    oninput: e => { enforceMax(e.currentTarget); state.val = e.currentTarget.innerText; },
     onpaste: pastePlainText,
     onfocus: e => {
       // Clicking into the box while it still holds the untouched
