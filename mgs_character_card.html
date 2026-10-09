@@ -384,6 +384,9 @@
     flex-direction: column;
     gap: 0.4em;
     min-width: 0;
+    /* Take all the space left of the SICKNESSES panel, so adding or
+       removing parameters never shifts Morale or the sickness bars. */
+    flex: 1 1 auto;
   }
 
   .section-title {
@@ -402,6 +405,20 @@
     overflow-x: auto;
   }
 
+  /* Flexible gap between the regular parameters and the permanent one
+     (Morale): it absorbs all free space, so Morale stays pinned to the
+     right end no matter how many regular parameters there are, while
+     the parameter cells themselves never change size. */
+  /* Empty fixed slot: same footprint as a parameter, but invisible. */
+  .param-cell-empty {
+    font-size: 1.2em;
+    width: 2.4em;
+    min-width: 2.4em;
+    flex: 0 0 2.4em;
+  }
+
+  .param-spacer { flex: 1 1 0; min-width: 0.6em; }
+
   .param-cell {
     background: var(--dark);
     position: relative;
@@ -412,8 +429,11 @@
     color: #fff;
     font-weight: bold;
     font-size: 1.2em;
+    /* Fixed size: cells must not grow or shrink as parameters are
+       added or removed. */
+    width: 2.4em;
     min-width: 2.4em;
-    flex: 1 0 auto;
+    flex: 0 0 2.4em;
     /* Draggable (see makeBarDraggable) - stops touch scrolling from
        hijacking a drag on mobile, and hints at the interaction on
        desktop. */
@@ -422,7 +442,7 @@
   }
 
   .param-cell:nth-child(6),
-.param-cell:last-child{
+  .param-cell-empty:nth-child(6) {
     margin-left: .5em;
   }
 
@@ -473,6 +493,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.4em;
+    flex: none;
   }
 
   .sick-row {
@@ -1828,7 +1849,7 @@ function makeSkill(icon, name) {
   };
 }
 
-function makeParam(icon, percent, special, specialGrade, locked, permanent) {
+function makeParam(icon, percent, special, specialGrade, locked, permanent, vacant) {
   return {
     icon: van.state(icon),
     percent: van.state(percent),
@@ -1842,6 +1863,10 @@ function makeParam(icon, percent, special, specialGrade, locked, permanent) {
     // and a read-only icon, so it can never be deleted or renamed away.
     // Morale's icon also counts as permanent for back-compat with older saves.
     permanent: !!permanent || icon === MORALE_ICON_EMOJI,
+    // Plain flag: an empty fixed slot left behind when a locked parameter
+    // (one of the 13 fixed slots) is deleted. It keeps the slot's position so
+    // nothing shifts, and the next parameter added fills it.
+    vacant: !!vacant,
   };
 }
 
@@ -1880,14 +1905,14 @@ function createDefaultParams() {
     makeParam('🍴', 20, false, 'S', true), // Mess Hall - locked
     makeParam('💊', 20, false, 'S', true), // Medical - locked
     makeParam('📊', 15, false, 'S', true), // Intel - locked
-    makeParam('🎯', 55), // Shoot
-    makeParam('🔄', 10), // Reload
-    makeParam('💣', 10), // Throw
-    makeParam('⛓', 20), // Place
-    makeParam('🚶', 100), // Walk
-    makeParam('🏃', 20), // Run
-    makeParam('✊', 10), // Fight
-    makeParam('🛡️', 20), // Defense
+    makeParam('🎯', 55, false, 'S', true), // Shoot - locked
+    makeParam('🔄', 10, false, 'S', true), // Reload - locked
+    makeParam('💣', 10, false, 'S', true), // Throw - locked
+    makeParam('⛓', 20, false, 'S', true), // Place - locked
+    makeParam('🚶', 100, false, 'S', true), // Walk - locked
+    makeParam('🏃', 20, false, 'S', true), // Run - locked
+    makeParam('✊', 10, false, 'S', true), // Fight - locked
+    makeParam('🛡️', 20, false, 'S', true), // Defense - locked
     makeParam('🙌', 100, true, '⇈', false, true), // Morale - permanent
     // The 4 sickness columns (Hostility, Sick, Wounded, PTSD) live
     // separately - see SICKNESS_ICONS/SicknessCell below.
@@ -1969,6 +1994,7 @@ function collectSerializable() {
       specialGrade: p.specialGrade.val,
       locked: p.locked,
       permanent: p.permanent,
+      vacant: p.vacant,
     })),
   };
 }
@@ -2031,13 +2057,19 @@ function loadSavedState() {
   }
 
   if (Array.isArray(data.paramsList) && data.paramsList.length > 0) {
-    paramsList.val = data.paramsList.map(p => makeParam(
+    // The 13 default slots (Combat ... Defense) are always locked in
+    // place, even in cards saved before the lock flag existed: a saved
+    // parameter whose icon still matches the default at the same
+    // position keeps that fixed slot.
+    const defaultSlots = createDefaultParams().filter(d => !d.permanent);
+    paramsList.val = data.paramsList.map((p, i) => makeParam(
       typeof p.icon === 'string' ? p.icon : '\u2753',
       clamp(Number(p.percent) || 0, 0, 100),
       !!p.special,
       typeof p.specialGrade === 'string' ? p.specialGrade : 'S',
-      !!p.locked,
+      !!p.locked || !!p.vacant || (i < defaultSlots.length && p.icon === defaultSlots[i].icon.val),
       !!p.permanent,
+      !!p.vacant,
     ));
     // Safety net: if an older/edited save somehow lacks Morale, restore it.
     if (!paramsList.val.some(p => p.permanent)) {
@@ -2257,7 +2289,7 @@ function Card() {
       div({ class: 'params-and-sick' },
         div({ class: 'params-section' },
           div({ class: 'section-title' }, '<PARAMETERS>'),
-          div({ class: 'params-row' }, () => div({ style: 'display:contents' }, ...paramsList.val.map(p => ParamCell(p)))),
+          div({ class: 'params-row' }, () => div({ style: 'display:contents' }, ...paramsList.val.filter(p => !p.permanent).map(p => p.vacant ? div({ class: 'param-cell-empty' }) : ParamCell(p)), div({ class: 'param-spacer' }), ...paramsList.val.filter(p => p.permanent).map(p => ParamCell(p)))),
         ),
         div({ class: 'sick-panel' },
           div({ class: 'section-title' }, '<SICKNESSES>'),
@@ -2562,6 +2594,12 @@ function SkillEditRow(s, i) {
 let draggedParam = null;
 
 function ParamEditRow(p, onRemove) {
+  if (p.vacant) {
+    return div({ class: 'param-edit-row locked-param' },
+      span({ class: 'param-lock-icon', title: 'Fixed position' }, '\u{1F512}'),
+      span({ style: 'opacity:0.6;font-size:0.9em;' }, 'Empty fixed slot - the next parameter you add fills it'),
+    );
+  }
   const row = div({ class: 'param-edit-row' + (p.locked ? ' locked-param' : '') },
     p.locked
       ? span({ class: 'param-lock-icon', title: "This parameter's position is fixed" }, '\u{1F512}')
@@ -2709,6 +2747,15 @@ function ParamsEditorSection() {
   function addRow(p) {
     const rowEl = ParamEditRow(p, () => {
       if (p.permanent) return;
+      if (p.locked) {
+        // One of the fixed slots (the first five): leave an empty slot
+        // in the same position so nothing shifts; a newly added
+        // parameter will fill it.
+        const vacant = makeParam('', 0, false, 'S', true, false, true);
+        paramsList.val = paramsList.val.map(item => item === p ? vacant : item);
+        rebuildAll();
+        return;
+      }
       paramsList.val = paramsList.val.filter(item => item !== p);
       const el = rowElByParam.get(p);
       if (el) { el.remove(); rowElByParam.delete(p); }
@@ -2736,6 +2783,15 @@ function ParamsEditorSection() {
     button({
       class: 'add-param-btn',
       onclick: () => {
+        const slot = paramsList.val.findIndex(item => item.vacant);
+        if (slot !== -1) {
+          // Fill the first empty fixed slot; the new parameter is locked
+          // there like the originals.
+          const filled = makeParam('\u2753', 50, false, 'S', true);
+          paramsList.val = paramsList.val.map((item, i) => i === slot ? filled : item);
+          rebuildAll();
+          return;
+        }
         const p = makeParam('\u2753', 50);
         paramsList.val = [...paramsList.val, p];
         addRow(p);
