@@ -151,7 +151,7 @@
        is a sibling of .grid (not inside it) positioned absolutely
        along the very bottom edge of .card - without this, the ticker
        bar would sit on top of (and hide) the bottom of the quote box. */
-    padding: 3.5% 3% 6% 2%;
+    padding: 3.5% 3% 4.75% 2%; /* bottom = ticker height (~2.25% of width) + ~2.5% gap, matching the side margins */
     display: grid;
     grid-template-columns: 26% 1fr;
     grid-template-rows: auto auto 1fr;
@@ -212,6 +212,11 @@
     background-position: center center;
   }
 
+  .portrait.has-photo {
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+  }
+
   .portrait { cursor: pointer; }
 
   .portrait.drag-over {
@@ -236,6 +241,58 @@
   }
   .arrow.up { top: 6px; }
   .arrow.down { bottom: 6px; }
+
+
+  /* ---------- PROFILE IMAGE CROPPER ---------- */
+  .crop-overlay {
+    position: fixed; inset: 0; z-index: 100000;
+    background: rgba(0,0,0,0.85);
+    display: flex; align-items: center; justify-content: center;
+    padding: 12px; box-sizing: border-box;
+    font-family: 'Courier New', Courier, monospace;
+  }
+  .crop-dialog {
+    background: #1b1b1b; color: #eee; border: 2px solid var(--orange, #e8812c);
+    padding: 12px; max-width: 100%; max-height: 100%;
+    display: flex; flex-direction: column; gap: 10px; box-sizing: border-box;
+  }
+  .crop-title { font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
+  .crop-hint { font-size: 12px; opacity: 0.7; }
+  .crop-stage {
+    position: relative; align-self: center;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    background: #000; line-height: 0;
+  }
+  .crop-stage img { display: block; pointer-events: none; -webkit-user-drag: none; }
+  .crop-box {
+    position: absolute; box-sizing: border-box;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);
+    cursor: move; touch-action: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35)),
+      linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35)),
+      linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35)),
+      linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35));
+    background-size: 1px 100%, 1px 100%, 100% 1px, 100% 1px;
+    background-position: 33.333% 0, 66.666% 0, 0 33.333%, 0 66.666%;
+    background-repeat: no-repeat;
+  }
+  .crop-handle {
+    position: absolute; width: 22px; height: 22px;
+    background: var(--orange, #e8812c); border: 2px solid #fff; box-sizing: border-box;
+    touch-action: none;
+  }
+  .crop-handle.nw { left: -12px; top: -12px; cursor: nwse-resize; }
+  .crop-handle.ne { right: -12px; top: -12px; cursor: nesw-resize; }
+  .crop-handle.sw { left: -12px; bottom: -12px; cursor: nesw-resize; }
+  .crop-handle.se { right: -12px; bottom: -12px; cursor: nwse-resize; }
+  .crop-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .crop-actions button {
+    font-family: inherit; font-size: 14px; padding: 8px 16px; cursor: pointer;
+    border: 2px solid var(--orange, #e8812c); background: transparent; color: #eee;
+  }
+  .crop-actions button.primary { background: var(--orange, #e8812c); color: #111; font-weight: bold; }
 
   /* ---------- HEADER / NAME ---------- */
   .header-col {
@@ -408,8 +465,12 @@
     flex-wrap: nowrap;
     gap: 4px;
     height: 80px;
-    overflow-x: auto;
+    /* No scrollbar at all: the row is simply clipped, never scrollable. */
+    overflow: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  .params-row::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
   /* Flexible gap between the regular parameters and the permanent one
      (Morale): it absorbs all free space, so Morale stays pinned to the
@@ -1117,140 +1178,6 @@
   .quote-box.editable-text:focus {
     box-shadow: 0 0 0 2px var(--orange);
     background: rgba(58, 58, 58, 0.4);
-  }
-
-  /* ---------- PHOTO CROPPER (1:1 crop window shown after choosing a photo) ---------- */
-  .crop-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 2000;               /* above the editor dialog (1002), below the hover tip (4000) */
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px;
-    font-family: 'Courier New', Courier, monospace;
-  }
-  .crop-dialog {
-    width: min(100%, 620px);
-    max-height: 100%;
-    display: flex;
-    flex-direction: column;
-    background: #1c1c1c;
-    color: #eee;
-    border-top: 3px solid var(--red);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
-  }
-  .crop-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 16px;
-    background: var(--dark);
-    border-bottom: 2px solid var(--red);
-  }
-  .crop-header h2 { margin: 0; font-size: 1.05em; letter-spacing: 3px; color: #fff; }
-  .crop-body {
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    padding: 10px 14px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-  .crop-hint { font-size: 0.8em; color: #aaa; text-align: center; letter-spacing: 0.5px; }
-  .crop-stage {
-    position: relative;
-    flex: none;
-    overflow: hidden;            /* clips the box's big dimming shadow to the image */
-    line-height: 0;
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: none;
-    background-color: #2a2a2a;   /* faint checkerboard so transparent PNGs read as transparent */
-    background-image:
-      linear-gradient(45deg, #3a3a3a 25%, transparent 25%, transparent 75%, #3a3a3a 75%),
-      linear-gradient(45deg, #3a3a3a 25%, transparent 25%, transparent 75%, #3a3a3a 75%);
-    background-size: 16px 16px;
-    background-position: 0 0, 8px 8px;
-  }
-  .crop-img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    -webkit-user-drag: none;
-    user-select: none;
-  }
-  .crop-box {
-    position: absolute;
-    border: 2px solid var(--orange);
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
-    cursor: move;
-    touch-action: none;
-  }
-  .crop-box::before {            /* rule-of-thirds guides */
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background:
-      linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35)) 33.333% 0 / 1px 100% no-repeat,
-      linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35)) 66.666% 0 / 1px 100% no-repeat,
-      linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35)) 0 33.333% / 100% 1px no-repeat,
-      linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35)) 0 66.666% / 100% 1px no-repeat;
-  }
-  .crop-handle {                 /* inside the corners so they're never clipped at the image edge */
-    position: absolute;
-    width: 22px;
-    height: 22px;
-    background: var(--orange);
-    border: 2px solid #fff;
-    opacity: 0.95;
-    touch-action: none;
-  }
-  .crop-handle[data-corner="nw"] { left: -2px;  top: -2px;    cursor: nwse-resize; }
-  .crop-handle[data-corner="ne"] { right: -2px; top: -2px;    cursor: nesw-resize; }
-  .crop-handle[data-corner="sw"] { left: -2px;  bottom: -2px; cursor: nesw-resize; }
-  .crop-handle[data-corner="se"] { right: -2px; bottom: -2px; cursor: nwse-resize; }
-  .crop-footer {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 10px;
-    padding: 10px 14px;
-    background: var(--dark);
-    border-top: 1px solid #444;
-  }
-  .crop-size-row {
-    flex: 1 1 140px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.8em;
-    letter-spacing: 2px;
-    color: #ccc;
-  }
-  .crop-size-row input[type="range"] { flex: 1; min-width: 60px; accent-color: var(--orange); }
-  .crop-btn {
-    background: #1c1c1c;
-    color: #fff;
-    border: 1px solid #777;
-    padding: 8px 14px;
-    font: bold 0.85em 'Courier New', Courier, monospace;
-    letter-spacing: 2px;
-    cursor: pointer;
-  }
-  .crop-btn:hover { border-color: var(--orange); color: var(--orange); }
-  .crop-btn-primary { background: var(--red); border-color: var(--red); }
-  .crop-btn-primary:hover { background: #f02a0f; color: #fff; border-color: var(--orange); }
-  @media (max-height: 480px) {   /* landscape phones: give the image the room */
-    .crop-hint { display: none; }
-    .crop-header { padding: 6px 12px; }
-    .crop-body { padding: 8px 12px; }
-    .crop-footer { padding: 8px 12px; }
   }
 
   /* ---------- HOVER TOOLTIP (parameter / sickness names) ---------- */
@@ -3204,221 +3131,145 @@ function loadImageFile(file) {
     dropzoneInstance.addFile(file);
   } else {
     const reader = new FileReader();
-    reader.onload = e => { cropAndSetProfileImage(e.target.result, null); };
+    reader.onload = e => { openCropper(e.target.result, file.type, setProfileImage, null); };
     reader.readAsDataURL(file);
   }
 }
 
-// ---------- photo cropper ----------
-// Shown whenever a NEW photo is chosen (picker, drag-and-drop onto the card,
-// or the editor dropzone). Lets the user position/resize a square (1:1) crop
-// box over the image; only that square becomes the profile photo. Photos
-// restored from saved data never come through here, so they aren't re-cropped.
-// onApply(dataUrl) gets the cropped image; onCancel() is called if dismissed.
-function openCropper(srcUrl, onApply, onCancel) {
-  const probe = new Image();
-  probe.onload = () => {
-    if (!probe.naturalWidth || !probe.naturalHeight) { onApply(srcUrl); return; }
-    buildCropper(srcUrl, probe, onApply, onCancel);
+
+// ---------- profile image cropper ----------
+// Opens a modal showing the chosen image with a fixed 1:1 (square)
+// crop box that can be dragged to move and resized from its corners.
+// Calls onDone(croppedDataUrl) on confirm, onCancel() otherwise. The
+// output is the selected region only, scaled to at most 800x800, so the
+// card shows exactly what was framed here.
+const CROP_ASPECT = 1;
+const CROP_OUT_W = 800;
+const CROP_OUT_H = 800;
+function openCropper(dataUrl, mimeType, onDone, onCancel) {
+  const imgEl = new Image();
+  imgEl.onerror = () => { if (onCancel) onCancel(); };
+  imgEl.onload = () => {
+    const natW = imgEl.naturalWidth, natH = imgEl.naturalHeight;
+    if (!natW || !natH) { if (onCancel) onCancel(); return; }
+
+    // Fit the image inside the viewport (minus dialog chrome).
+    const maxW = Math.max(160, Math.min(window.innerWidth - 56, 900));
+    const maxH = Math.max(160, window.innerHeight - 190);
+    const scale = Math.min(maxW / natW, maxH / natH, 1);
+    const dispW = Math.round(natW * scale), dispH = Math.round(natH * scale);
+    imgEl.width = dispW; imgEl.height = dispH;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'crop-overlay';
+    const dialog = document.createElement('div');
+    dialog.className = 'crop-dialog';
+    const title = document.createElement('div');
+    title.className = 'crop-title';
+    title.textContent = 'Crop Profile Image (1:1)';
+    const hint = document.createElement('div');
+    hint.className = 'crop-hint';
+    hint.textContent = 'Drag the box to move it. Drag a corner to resize.';
+    const stage = document.createElement('div');
+    stage.className = 'crop-stage';
+    stage.style.width = dispW + 'px';
+    stage.style.height = dispH + 'px';
+    stage.appendChild(imgEl);
+    const box = document.createElement('div');
+    box.className = 'crop-box';
+    ['nw', 'ne', 'sw', 'se'].forEach(c => {
+      const h = document.createElement('div');
+      h.className = 'crop-handle ' + c;
+      h.dataset.corner = c;
+      box.appendChild(h);
+    });
+    stage.appendChild(box);
+    const actions = document.createElement('div');
+    actions.className = 'crop-actions';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button'; cancelBtn.textContent = 'Cancel';
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button'; okBtn.className = 'primary'; okBtn.textContent = 'Use Crop';
+    actions.append(cancelBtn, okBtn);
+    dialog.append(title, hint, stage, actions);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    // Crop rect in displayed pixels, always w:h = 1:1.
+    let w = Math.min(dispW, dispH * CROP_ASPECT);
+    let h = w / CROP_ASPECT;
+    let x = (dispW - w) / 2, y = (dispH - h) / 2;
+    const minW = Math.min(40, dispW, dispH * CROP_ASPECT);
+    function render() {
+      box.style.left = x + 'px'; box.style.top = y + 'px';
+      box.style.width = w + 'px'; box.style.height = h + 'px';
+    }
+    render();
+
+    let drag = null;
+    box.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      box.setPointerCapture(e.pointerId);
+      const corner = e.target.dataset && e.target.dataset.corner;
+      drag = { id: e.pointerId, corner: corner || null, sx: e.clientX, sy: e.clientY, x, y, w, h };
+    });
+    box.addEventListener('pointermove', e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+      if (!drag.corner) {
+        x = Math.max(0, Math.min(dispW - w, drag.x + dx));
+        y = Math.max(0, Math.min(dispH - h, drag.y + dy));
+      } else {
+        // Anchor the opposite corner; width follows the pointer and
+        // height is derived so the box stays 1:1.
+        const c = drag.corner;
+        const ax = c.includes('w') ? drag.x + drag.w : drag.x;
+        const ay = c.includes('n') ? drag.y + drag.h : drag.y;
+        const rawW = c.includes('w') ? (drag.x + drag.w) - (drag.x + dx) : drag.w + dx;
+        const rawH = c.includes('n') ? (drag.y + drag.h) - (drag.y + dy) : drag.h + dy;
+        let nw = Math.max(rawW, rawH * CROP_ASPECT);
+        const maxWx = c.includes('w') ? ax : dispW - ax;
+        const maxHy = c.includes('n') ? ay : dispH - ay;
+        nw = Math.min(nw, maxWx, maxHy * CROP_ASPECT);
+        nw = Math.max(nw, minW);
+        w = nw; h = nw / CROP_ASPECT;
+        x = c.includes('w') ? ax - w : ax;
+        y = c.includes('n') ? ay - h : ay;
+      }
+      render();
+    });
+    const endDrag = e => { if (drag && e.pointerId === drag.id) drag = null; };
+    box.addEventListener('pointerup', endDrag);
+    box.addEventListener('pointercancel', endDrag);
+
+    function close() {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+    }
+    function onKey(e) { if (e.key === 'Escape') cancel(); }
+    function cancel() { close(); if (onCancel) onCancel(); }
+    document.addEventListener('keydown', onKey);
+    cancelBtn.addEventListener('click', cancel);
+    okBtn.addEventListener('click', () => {
+      const k = natW / dispW;
+      const sx = x * k, sy = y * k, sw = w * k, sh = w / CROP_ASPECT * k;
+      const outScale = Math.min(1, CROP_OUT_W / sw, CROP_OUT_H / sh);
+      const canvasEl = document.createElement('canvas');
+      canvasEl.width = Math.max(1, Math.round(sw * outScale));
+      canvasEl.height = Math.max(1, Math.round(sh * outScale));
+      const ctx = canvasEl.getContext('2d');
+      ctx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, canvasEl.width, canvasEl.height);
+      // Keep transparency for formats that can carry it; JPEG otherwise
+      // to keep the saved card small.
+      const keepAlpha = /png|webp|gif|svg/i.test(mimeType || '');
+      let out;
+      try { out = keepAlpha ? canvasEl.toDataURL('image/png') : canvasEl.toDataURL('image/jpeg', 0.92); }
+      catch (err) { console.warn('Could not crop image:', err); close(); if (onCancel) onCancel(); return; }
+      close();
+      onDone(out);
+    });
   };
-  // Couldn't decode it for cropping - fall back to the old behaviour.
-  probe.onerror = () => onApply(srcUrl);
-  probe.src = srcUrl;
-}
-
-function buildCropper(srcUrl, probe, onApply, onCancel) {
-  const natW = probe.naturalWidth;
-  const natH = probe.naturalHeight;
-  const MIN_BOX = 48;    // smallest crop box, in on-screen px
-  const MAX_OUT = 1200;  // largest output side, in image px (keeps the saved card small)
-  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-
-  const overlay = document.createElement('div');
-  overlay.className = 'crop-overlay';
-  overlay.innerHTML =
-    '<div class="crop-dialog" role="dialog" aria-modal="true" aria-label="Crop profile photo">' +
-      '<div class="crop-header"><h2>CROP PHOTO</h2>' +
-        '<button type="button" class="editor-close" data-act="cancel" aria-label="Cancel">\u2715</button></div>' +
-      '<div class="crop-body">' +
-        '<div class="crop-hint">Drag the square to move it \u00b7 drag a corner to resize \u00b7 square (1:1) crop</div>' +
-        '<div class="crop-stage"><img class="crop-img" alt="" draggable="false">' +
-          '<div class="crop-box">' +
-            '<span class="crop-handle" data-corner="nw"></span><span class="crop-handle" data-corner="ne"></span>' +
-            '<span class="crop-handle" data-corner="sw"></span><span class="crop-handle" data-corner="se"></span>' +
-          '</div></div>' +
-      '</div>' +
-      '<div class="crop-footer">' +
-        '<button type="button" class="crop-btn" data-act="reset">RESET</button>' +
-        '<label class="crop-size-row">SIZE <input type="range" class="crop-size" min="0" max="100" step="0.1" value="100"></label>' +
-        '<button type="button" class="crop-btn" data-act="cancel">CANCEL</button>' +
-        '<button type="button" class="crop-btn crop-btn-primary" data-act="apply">APPLY CROP</button>' +
-      '</div>' +
-    '</div>';
-
-  const stage = overlay.querySelector('.crop-stage');
-  const imgEl = overlay.querySelector('.crop-img');
-  const boxEl = overlay.querySelector('.crop-box');
-  const slider = overlay.querySelector('.crop-size');
-  imgEl.src = srcUrl;
-
-  // Crop box lives in the image's own pixel coordinates (so resizing the
-  // window just re-renders it); `scale` converts image px -> screen px.
-  let scale = 1;
-  const box = { x: 0, y: 0, s: Math.min(natW, natH) };
-  const maxSize = () => Math.min(natW, natH);
-  const minSize = () => Math.min(maxSize(), MIN_BOX / scale);
-
-  function resetBox() {
-    box.s = maxSize();
-    box.x = (natW - box.s) / 2;
-    box.y = (natH - box.s) / 2;
-  }
-
-  function render() {
-    stage.style.width = (natW * scale) + 'px';
-    stage.style.height = (natH * scale) + 'px';
-    boxEl.style.left = (box.x * scale) + 'px';
-    boxEl.style.top = (box.y * scale) + 'px';
-    boxEl.style.width = (box.s * scale) + 'px';
-    boxEl.style.height = (box.s * scale) + 'px';
-    const span = maxSize() - minSize();
-    slider.value = span > 0 ? ((box.s - minSize()) / span) * 100 : 100;
-    slider.disabled = span <= 0;
-  }
-
-  function layout() {
-    const maxW = Math.max(120, Math.min(560, window.innerWidth - 24 - 28 - 6));
-    const maxH = Math.max(140, window.innerHeight - 190);
-    scale = Math.min(maxW / natW, maxH / natH);
-    box.s = clamp(box.s, minSize(), maxSize());
-    box.x = clamp(box.x, 0, natW - box.s);
-    box.y = clamp(box.y, 0, natH - box.s);
-    render();
-  }
-
-  // ---- dragging: move the box, or resize it from a corner (always square) ----
-  let drag = null;
-  stage.addEventListener('pointerdown', e => {
-    if (!e.target.closest('.crop-box')) return;
-    const handle = e.target.closest('.crop-handle');
-    e.preventDefault();
-    try { stage.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-    drag = {
-      id: e.pointerId,
-      mode: handle ? 'resize' : 'move',
-      corner: handle ? handle.dataset.corner : null,
-      x0: e.clientX, y0: e.clientY,
-      start: { x: box.x, y: box.y, s: box.s },
-    };
-  });
-  stage.addEventListener('pointermove', e => {
-    if (!drag || e.pointerId !== drag.id) return;
-    const dx = (e.clientX - drag.x0) / scale;
-    const dy = (e.clientY - drag.y0) / scale;
-    const b = drag.start;
-    if (drag.mode === 'move') {
-      box.x = clamp(b.x + dx, 0, natW - b.s);
-      box.y = clamp(b.y + dy, 0, natH - b.s);
-    } else {
-      // The corner opposite the one being dragged stays pinned.
-      const sx = drag.corner.indexOf('e') >= 0 ? 1 : -1;
-      const sy = drag.corner.indexOf('s') >= 0 ? 1 : -1;
-      const ax = sx > 0 ? b.x : b.x + b.s;
-      const ay = sy > 0 ? b.y : b.y + b.s;
-      const mx = ax + sx * b.s + dx;       // where the dragged corner is now
-      const my = ay + sy * b.s + dy;
-      let s = Math.min((mx - ax) * sx, (my - ay) * sy);
-      const roomX = sx > 0 ? natW - ax : ax;
-      const roomY = sy > 0 ? natH - ay : ay;
-      s = clamp(s, minSize(), Math.min(roomX, roomY));
-      box.s = s;
-      box.x = sx > 0 ? ax : ax - s;
-      box.y = sy > 0 ? ay : ay - s;
-    }
-    render();
-  });
-  const endDrag = e => { if (drag && (!e || e.pointerId === drag.id)) drag = null; };
-  stage.addEventListener('pointerup', endDrag);
-  stage.addEventListener('pointercancel', endDrag);
-  stage.addEventListener('lostpointercapture', endDrag);
-
-  // ---- size slider: grows/shrinks the box around its centre ----
-  slider.addEventListener('input', () => {
-    const cx = box.x + box.s / 2;
-    const cy = box.y + box.s / 2;
-    const s = minSize() + (maxSize() - minSize()) * (parseFloat(slider.value) / 100);
-    box.s = s;
-    box.x = clamp(cx - s / 2, 0, natW - s);
-    box.y = clamp(cy - s / 2, 0, natH - s);
-    render();
-  });
-
-  // ---- finish ----
-  function close() {
-    document.removeEventListener('keydown', onKey, true);
-    window.removeEventListener('resize', layout);
-    overlay.remove();
-  }
-  function cancel() { close(); if (onCancel) onCancel(); }
-  function apply() {
-    const out = document.createElement('canvas');
-    out.width = out.height = Math.max(1, Math.min(MAX_OUT, Math.round(box.s)));
-    const ctx = out.getContext('2d');
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(probe, box.x, box.y, box.s, box.s, 0, 0, out.width, out.height);
-    // Keep JPEGs as JPEGs (small); everything else as PNG so transparency
-    // survives (the card detects and styles transparent portraits).
-    const isJpeg = /^data:image\/jpe?g/i.test(srcUrl);
-    let result;
-    try {
-      result = isJpeg ? out.toDataURL('image/jpeg', 0.92) : out.toDataURL('image/png');
-    } catch (err) {
-      console.warn('Could not export cropped photo, using the original:', err);
-      result = srcUrl;
-    }
-    close();
-    onApply(result);
-  }
-  function onKey(e) {
-    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); }
-    else if (e.key === 'Enter' && !(e.target && e.target.tagName === 'BUTTON')) { e.preventDefault(); apply(); }
-  }
-  overlay.addEventListener('click', e => {
-    const act = e.target.closest && e.target.closest('[data-act]');
-    if (!act) return;
-    if (act.dataset.act === 'apply') apply();
-    else if (act.dataset.act === 'cancel') cancel();
-    else if (act.dataset.act === 'reset') { resetBox(); render(); }
-  });
-
-  document.body.appendChild(overlay);
-  document.addEventListener('keydown', onKey, true);
-  window.addEventListener('resize', layout);
-  resetBox();
-  layout();
-  const applyBtn = overlay.querySelector('[data-act="apply"]');
-  if (applyBtn) applyBtn.focus();
-}
-
-// Every newly chosen photo (any entry point) ends up here: crop first, then
-// set it as the portrait. If the crop is cancelled the current photo stays.
-let skipDropzoneClear = false;
-function cropAndSetProfileImage(dataUrl, file) {
-  openCropper(dataUrl, cropped => {
-    setProfileImage(cropped);
-    // Make the editor dropzone's thumbnail show the cropped result too.
-    if (dropzoneInstance && file) {
-      try { dropzoneInstance.emit('thumbnail', file, cropped); } catch (err) { /* cosmetic only */ }
-    }
-  }, () => {
-    // Cancelled: drop the just-added file from the dropzone widget, but do
-    // NOT let its removedfile handler wipe the photo already on the card.
-    if (dropzoneInstance && file) {
-      skipDropzoneClear = true;
-      try { dropzoneInstance.removeFile(file); } finally { skipDropzoneClear = false; }
-    }
-  });
+  imgEl.src = dataUrl;
 }
 
 function setupDropzone(container) {
@@ -3430,16 +3281,33 @@ function setupDropzone(container) {
     addRemoveLinks: true,
     dictDefaultMessage: 'Drop a profile photo here or click to upload',
   });
+  // Set while this code removes files from the widget itself, so the
+  // 'removedfile' handler doesn't mistake that for the user clearing the
+  // photo (which would wipe the card's current image).
+  let dzInternalRemove = false;
+  function dzRemove(f) {
+    dzInternalRemove = true;
+    try { dz.removeFile(f); } finally { dzInternalRemove = false; }
+  }
   dz.on('addedfile', file => {
-    if (dz.files.length > 1) {
-      dz.removeFile(dz.files[0]);
-    }
     const reader = new FileReader();
-    reader.onload = e => { cropAndSetProfileImage(e.target.result, file); };
+    reader.onload = e => {
+      openCropper(e.target.result, file.type,
+        cropped => {
+          // Confirmed: drop any older file from the widget, keep this one.
+          dz.files.slice().forEach(f => { if (f !== file) dzRemove(f); });
+          setProfileImage(cropped);
+        },
+        () => {
+          // Cancelled: leave the existing photo untouched.
+          dzRemove(file);
+        });
+    };
     reader.readAsDataURL(file);
   });
   dz.on('removedfile', () => {
-    if (dz.files.length === 0 && !skipDropzoneClear) clearProfileImage();
+    if (dzInternalRemove) return;
+    if (dz.files.length === 0) clearProfileImage();
   });
   dropzoneInstance = dz;
   return dz;
@@ -3562,7 +3430,7 @@ function Dialog() {
 
       div({ class: 'editor-section' },
         h3({}, 'PHOTO'),
-        div({ class: 'current-photo-hint' }, 'Upload a profile photo (used as the portrait image). You\'ll pick a square crop after choosing it.'),
+        div({ class: 'current-photo-hint' }, 'Upload a profile photo (used as the portrait image).'),
         dzContainer,
         label({ class: 'pixel-mode-toggle' },
           halftoneCheckbox(),
