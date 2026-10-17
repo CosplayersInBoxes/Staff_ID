@@ -670,6 +670,9 @@
     flex-direction: column;
     gap: 0.5em;
     min-height: 0;
+    /* Sit at the bottom of the grid row, so the skills block ends where
+       the (formerly taller) bio box used to end. */
+    justify-content: flex-end;
   }
 
   .skills-title {
@@ -681,7 +684,7 @@
 
   .skills-box {
     color: #fff;
-    flex: 1;
+    flex: none;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -715,11 +718,13 @@
 
   .quote-box {
     background: rgba(58,58,58,0.92);
-    flex: 1;
+    /* Exactly five rows: 5 x line-height (1.5em) + top/bottom padding. */
+    flex: none;
+    height: calc(5 * 1.5em + 40px);
     padding: 20px 24px;
     font-size: 1.25em;
     line-height: 1.5;
-    overflow: auto;
+    overflow: hidden;
     white-space: pre-wrap;
   }
 
@@ -2029,6 +2034,7 @@ const DEFAULT_CODENAME = 'CODENAME';
 const CODENAME_MAX = 32;
 const SKILL_NAME_MAX = 44;
 const QUOTE_MAX = 455; // quote/bio box
+const QUOTE_MAX_ROWS = 5; // quote/bio box holds at most this many rows of text
 const DEFAULT_CLASS = 'Class';
 const DEFAULT_ROLE = 'Role';
 const DEFAULT_PRONOUNS = 'Pronouns';
@@ -2499,7 +2505,7 @@ function Card() {
               SkillIcon(s),
               SkillField(s, i))),
           ),
-          editableMultiline(div, quote, { extraClass: 'quote-box', defaultValue: DEFAULT_QUOTE, maxLen: QUOTE_MAX }),
+          editableMultiline(div, quote, { extraClass: 'quote-box', defaultValue: DEFAULT_QUOTE, maxLen: QUOTE_MAX, maxRows: QUOTE_MAX_ROWS }),
         ),
       ),
     ),
@@ -2542,11 +2548,15 @@ function quoteTextarea(state) {
   const el = textarea({
     value: state.val,
     maxlength: QUOTE_MAX,
+    rows: QUOTE_MAX_ROWS,
     oninput: e => { state.val = e.target.value; },
   });
   van.derive(() => {
     const v = state.val;
-    if (document.activeElement !== el && el.value !== v) el.value = v;
+    // While focused, only accept an update that is a trimmed-down
+    // version of what's typed (the card's 4-row limit cutting the
+    // overflow); anything else would fight the user's caret.
+    if (el.value !== v && (document.activeElement !== el || el.value.startsWith(v))) el.value = v;
   });
   return el;
 }
@@ -2738,7 +2748,7 @@ document.addEventListener('mousedown', e => {
 // Multi-line editable field (quote/bio): Enter is allowed to insert a
 // real line break, matching the textarea in the sidebar dialog.
 function editableMultiline(tagFn, state, opts = {}) {
-  const { extraClass = '', defaultValue = null, maxLen = 0 } = opts;
+  const { extraClass = '', defaultValue = null, maxLen = 0, maxRows = 0 } = opts;
   // Trim to maxLen (if set) and keep the caret at the end.
   const enforceMax = node => {
     if (!maxLen || node.innerText.length <= maxLen) return;
@@ -2749,6 +2759,42 @@ function editableMultiline(tagFn, state, opts = {}) {
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
+  };
+  // Number of text rows the content currently wraps onto. Measured with
+  // the box temporarily sized to its content (offsetHeight ignores the
+  // mobile-scale transform, unlike getBoundingClientRect), so it works
+  // however tall the box itself is.
+  const countRows = node => {
+    const cs = getComputedStyle(node);
+    const lh = parseFloat(cs.lineHeight);
+    if (!lh) return 0;
+    const prev = { flex: node.style.flex, height: node.style.height, overflow: node.style.overflow };
+    node.style.flex = 'none';
+    node.style.height = 'auto';
+    node.style.overflow = 'visible';
+    const contentH = node.offsetHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    node.style.flex = prev.flex;
+    node.style.height = prev.height;
+    node.style.overflow = prev.overflow;
+    return Math.round(contentH / lh);
+  };
+  // Cut characters off the end until the text fits in maxRows rows.
+  // Returns true if anything was removed.
+  const enforceRows = node => {
+    if (!maxRows || countRows(node) <= maxRows) return false;
+    let text = node.innerText;
+    while (text.length && countRows(node) > maxRows) {
+      text = text.slice(0, -1);
+      node.innerText = text;
+    }
+    node.innerText = text.replace(/\s+$/, '');
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    return true;
   };
   const el = tagFn({
     class: `editable-text ${extraClass}`.trim(),
@@ -2764,7 +2810,7 @@ function editableMultiline(tagFn, state, opts = {}) {
       const selected = sel && el.contains(sel.anchorNode) ? sel.toString().length : 0;
       if (el.innerText.length - selected + adds > maxLen) e.preventDefault();
     },
-    oninput: e => { enforceMax(e.currentTarget); state.val = e.currentTarget.innerText; },
+    oninput: e => { enforceMax(e.currentTarget); enforceRows(e.currentTarget); state.val = e.currentTarget.innerText; },
     onpaste: pastePlainText,
     onfocus: e => {
       // Clicking into the box while it still holds the untouched
@@ -2782,7 +2828,13 @@ function editableMultiline(tagFn, state, opts = {}) {
 
   van.derive(() => {
     const v = state.val;
-    if (document.activeElement !== el && el.innerText !== v) el.innerText = v;
+    if (document.activeElement !== el && el.innerText !== v) {
+      el.innerText = v;
+      // Text that arrives from elsewhere (the sidebar field, a loaded
+      // card) gets the same row limit; push the trimmed text back so
+      // the state and the sidebar field match what the card shows.
+      if (enforceRows(el)) queueMicrotask(() => { state.val = el.innerText; });
+    }
   });
 
   return el;
