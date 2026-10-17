@@ -28,7 +28,7 @@
   .paper {
     width: 1280px;
     max-width: 100%;
-    aspect-ratio: 2560 / 1436;
+    aspect-ratio: 3.5 / 2; /* US business card (1.75:1). Width stays 1280px, so only the height changes (718px -> ~731px); the extra ~13px is absorbed by the 1fr bottom grid row (quote box), so every other box keeps its exact position and size. */
     position: relative;
     background-color: var(--bg-color);
     background-image: url('Paper.svg');
