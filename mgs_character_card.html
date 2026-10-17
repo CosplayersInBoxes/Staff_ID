@@ -2554,7 +2554,7 @@ function quoteTextarea(state) {
   van.derive(() => {
     const v = state.val;
     // While focused, only accept an update that is a trimmed-down
-    // version of what's typed (the card's 4-row limit cutting the
+    // version of what's typed (the card's 5-row limit cutting the
     // overflow); anything else would fight the user's caret.
     if (el.value !== v && (document.activeElement !== el || el.value.startsWith(v))) el.value = v;
   });
