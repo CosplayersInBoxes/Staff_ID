@@ -296,6 +296,10 @@
 
   /* ---------- HEADER / NAME ---------- */
   .header-col {
+    /* Lets the column shrink below its content's width, so a long
+       Class/Role/Pronouns line can never widen the grid column (and with
+       it the skill and bio boxes, or shift the stats and sicknesses). */
+    min-width: 0;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -2038,7 +2042,11 @@ function makeParam(icon, percent, special, specialGrade, locked, permanent, vaca
 // ---------- state ----------
 const DEFAULT_CODENAME = 'CODENAME';
 // Max characters that fit on the card at the current font/size.
-const CODENAME_MAX = 32;
+const CODENAME_MAX = 31;
+// Class / Role / Pronouns share one line on the card; this is the most
+// characters the three can add up to (not counting the " / " separators)
+// so the line always fits the header column and can't push the layout.
+const SUBTITLE_MAX_TOTAL = 58;
 const SKILL_NAME_MAX = 44;
 const QUOTE_MAX = 455; // quote/bio box
 const QUOTE_MAX_ROWS = 5; // quote/bio box holds at most this many rows of text
@@ -2103,6 +2111,12 @@ const pronounsPart = van.state(DEFAULT_PRONOUNS);
 // one dropdown can be open at a time, tracked by which field's key
 // ('class'/'role'/'pronouns'/'skill-0'..'skill-3') this holds, or null
 // when none are open.
+// How many more characters `state` (one of the three fields) may hold
+// given what the other two already use.
+function subtitleRoom(state) {
+  const others = [clsPart, rolePart, pronounsPart].filter(s => s !== state);
+  return Math.max(0, SUBTITLE_MAX_TOTAL - others.reduce((n, s) => n + s.val.length, 0));
+}
 const CLASS_PRESETS = ['Artist', 'Actor', 'Actress', 'Bipedal Weapons Developer', 'Child Soldier', 'Commanding Officer', 'Cook', 'Doctor', 'Elite Commando', 'Engineer', 'Game Designer', 'Hair Stylist', 'Mechanic', 'Medic', 'Nurse', 'Nutritionist', 'Photographer', 'Programmer', 'Researcher', 'Secret Agent', 'Scout', 'Sharpshooter', 'Spy', 'Streamer', 'Student', 'Tactical Cosplayer', 'VTuber'];
 const ROLE_PRESETS = ['Amanda Cosplayer', 'Big Boss Cosplayer', 'Code Talker Cosplayer', 'Colonel Volgin Cosplayer', 'Courtney Collins Cosplayer', 'Crying Wolf Cosplayer', 'Cyborg Nina Cosplayer', 'Cécile Cosplayer', 'Decoy Octopus Cosplayer', 'Dr. Madnar Cosplayer', 'Drebin Cosplayer', 'Ed Cosplayer', 'Elisa Cosplayer', 'Emma Emmerich Cosplayer', 'EVA Cosplayer', 'Fatman Cosplayer', 'Former Prisoner', 'Fortune Cosplayer', 'Genome Soldier Cosplayer', 'Gray Fox Cosplayer', 'Hal Emmerich Cosplayer', 'Haven Trooper Cosplayer', 'Hideo Kojima Cosplayer', 'Holly White Cosplayer', 'Hot Coldman Cosplayer', 'Huey Emmerich Cosplayer', 'Idol Paz Cosplayer', 'Jim Houseman Cosplayer', 'Johnny Sasaki Cosplayer', 'Jonathan Cosplayer', 'Kazuhira Miller Cosplayer', 'Kenneth Baker Cosplayer', 'Laughing Octopus Cosplayer', 'Liquid Ocelot Cosplayer', 'Liquid Snake Cosplayer', 'Little John Cosplayer', 'Lt. Cunningham Cosplayer', 'Major Zero Cosplayer', 'Man on Fire Cosplayer', 'Mei Ling Cosplayer', 'Meryl Silverburgh Cosplayer', 'Military Soldier', 'Mistral Cosplayer', 'Naomi Hunter Cosplayer', 'Nastasha Romanenko Cosplayer', 'Nikolai Sokolov Cosplayer', 'Ocelot Unit Cosplayer', 'Olga Gurlukovich Cosplayer', 'Para-Medic Cosplayer', 'Parasite Unit Cosplayer', 'Paz Ortega Andrade Cosplayer', 'Pequod Cosplayer', 'Peter Stillman Cosplayer', 'Psycho Mantis Cosplayer', 'Python Cosplayer', 'Quiet Cosplayer', 'Raging Raven Cosplayer', 'Raiden Cosplayer', 'Raikov Cosplayer', 'Revolver Ocelot Cosplayer', 'Richard Ames Cosplayer', 'Rosemary Cosplayer', 'Roy Campbell Cosplayer', 'Samuel Rodrigues Cosplayer', 'Screaming Mantis Cosplayer', 'Sigint Cosplayer', 'Skull Face Cosplayer', 'Sniper Wolf Cosplayer', 'Solid Snake Cosplayer', 'Solidus Snake Cosplayer', 'Steven Armstrong Cosplayer', 'Strangelove Cosplayer', 'Sundowner Cosplayer', 'Sunny Emmerich Cosplayer', 'The Boss Cosplayer', 'The End Cosplayer', 'The Fear Cosplayer', 'The Fury Cosplayer', 'The Pain Cosplayer', 'The Sorrow Cosplayer', 'Vamp Cosplayer', 'Venom Snake Cosplayer', 'Volunteer Soldier', 'Vulcan Raven Cosplayer'];
 const PRONOUNS_PRESETS = ['He/Him', 'He/Them', 'He/They', 'She/Her', 'She/Them', 'She/They', 'They/Them'];
@@ -2203,9 +2217,9 @@ function loadSavedState() {
   if (!data || typeof data !== 'object') return;
 
   if (typeof data.codename === 'string') codename.val = data.codename.slice(0, CODENAME_MAX);
-  if (typeof data.clsPart === 'string') clsPart.val = data.clsPart;
-  if (typeof data.rolePart === 'string') rolePart.val = data.rolePart;
-  if (typeof data.pronounsPart === 'string') pronounsPart.val = data.pronounsPart;
+  if (typeof data.clsPart === 'string') clsPart.val = data.clsPart.slice(0, subtitleRoom(clsPart));
+  if (typeof data.rolePart === 'string') rolePart.val = data.rolePart.slice(0, subtitleRoom(rolePart));
+  if (typeof data.pronounsPart === 'string') pronounsPart.val = data.pronounsPart.slice(0, subtitleRoom(pronounsPart));
   if (typeof data.life === 'number') life.val = clamp(Math.round(data.life), 0, 9999);
   if (typeof data.psyche === 'number') psyche.val = clamp(Math.round(data.psyche), 0, 9999);
   if (typeof data.gmp === 'number') gmp.val = clamp(Math.round(data.gmp), 0, 999999);
@@ -2561,7 +2575,7 @@ function quoteTextarea(state) {
   van.derive(() => {
     const v = state.val;
     // While focused, only accept an update that is a trimmed-down
-    // version of what's typed (the card's 5-row limit cutting the
+    // version of what's typed (the card's 4-row limit cutting the
     // overflow); anything else would fight the user's caret.
     if (el.value !== v && (document.activeElement !== el || el.value.startsWith(v))) el.value = v;
   });
@@ -2618,6 +2632,20 @@ function textInput(state, placeholder, maxLen) {
   return el;
 }
 
+// textInput for Class / Role / Pronouns: same shared character budget as
+// the fields on the card.
+function subtitleInput(state) {
+  const el = textInput(state);
+  el.addEventListener('input', () => {
+    const room = subtitleRoom(state);
+    if (el.value.length > room) {
+      el.value = el.value.slice(0, room);
+      state.val = el.value;
+    }
+  });
+  return el;
+}
+
 // ---------- inline contenteditable fields (direct editing on the card) ----------
 
 function pastePlainText(e) {
@@ -2634,10 +2662,14 @@ function pastePlainText(e) {
 // content is flattened to plain text on one line.
 function editableInline(tagFn, state, opts = {}) {
   const { extraClass = '', placeholder = '', maxLen = 0 } = opts;
-  // Trim to maxLen (if set) and keep the caret at the end.
+  // maxLen is a number, or a function returning the current limit (used
+  // by the Class/Role/Pronouns fields, which share one character budget).
+  const limit = () => (typeof maxLen === 'function' ? Math.max(0, maxLen()) : (maxLen || Infinity));
+  // Trim to the limit (if any) and keep the caret at the end.
   const enforceMax = node => {
-    if (!maxLen || node.textContent.length <= maxLen) return;
-    node.textContent = node.textContent.slice(0, maxLen);
+    const max = limit();
+    if (node.textContent.length <= max) return;
+    node.textContent = node.textContent.slice(0, max);
     const range = document.createRange();
     range.selectNodeContents(node);
     range.collapse(false);
@@ -2652,10 +2684,10 @@ function editableInline(tagFn, state, opts = {}) {
     'data-placeholder': placeholder,
     // Block typed characters once full (unless replacing a selection).
     onbeforeinput: e => {
-      if (!maxLen || !e.data || e.inputType === 'insertFromPaste') return;
+      if (limit() === Infinity || !e.data || e.inputType === 'insertFromPaste') return;
       const sel = window.getSelection();
       const selected = sel && el.contains(sel.anchorNode) ? sel.toString().length : 0;
-      if (el.textContent.length - selected + e.data.length > maxLen) e.preventDefault();
+      if (el.textContent.length - selected + e.data.length > limit()) e.preventDefault();
     },
     oninput: e => { enforceMax(e.currentTarget); state.val = e.currentTarget.textContent; },
     onkeydown: e => {
@@ -2697,7 +2729,7 @@ function editableInline(tagFn, state, opts = {}) {
 // SkillIcon-paired editableInline) let callers with their own field
 // element reuse the same dropdown wiring instead of building a plain one.
 function presetField(state, presets, key, placeholder, opts = {}) {
-  const el = opts.textEl || editableInline(span, state, { placeholder, extraClass: opts.extraClass });
+  const el = opts.textEl || editableInline(span, state, { placeholder, extraClass: opts.extraClass, maxLen: opts.maxLen });
   el.addEventListener('focus', () => { openPresetDropdown.val = key; });
 
   const wrap = span(
@@ -2709,11 +2741,13 @@ function presetField(state, presets, key, placeholder, opts = {}) {
         type: 'button',
         class: 'class-dropdown-item',
         onclick: () => {
-          state.val = preset;
+          // Respect the shared Class/Role/Pronouns budget, if this field has one.
+          const chosen = typeof opts.maxLen === 'function' ? preset.slice(0, Math.max(0, opts.maxLen())) : preset;
+          state.val = chosen;
           // editableInline's own van.derive skips syncing while the box
           // is focused - it just lost focus to this button, so update
           // the visible text directly rather than waiting on that.
-          el.textContent = preset;
+          el.textContent = chosen;
           openPresetDropdown.val = null;
         },
       }, preset)),
@@ -2723,15 +2757,15 @@ function presetField(state, presets, key, placeholder, opts = {}) {
 }
 
 function ClassField() {
-  return presetField(clsPart, CLASS_PRESETS, 'class', 'Class');
+  return presetField(clsPart, CLASS_PRESETS, 'class', 'Class', { maxLen: () => subtitleRoom(clsPart) });
 }
 
 function RoleField() {
-  return presetField(rolePart, ROLE_PRESETS, 'role', 'Role');
+  return presetField(rolePart, ROLE_PRESETS, 'role', 'Role', { maxLen: () => subtitleRoom(rolePart) });
 }
 
 function PronounsField() {
-  return presetField(pronounsPart, PRONOUNS_PRESETS, 'pronouns', 'Pronouns');
+  return presetField(pronounsPart, PRONOUNS_PRESETS, 'pronouns', 'Pronouns', { maxLen: () => subtitleRoom(pronounsPart) });
 }
 
 // One skill slot's name field on the card, with the same preset
@@ -3565,11 +3599,11 @@ function Dialog() {
         div({ class: 'field' },
           div({}, 'Class / Role / Pronouns'),
           div({ class: 'subtitle-row' },
-            textInput(clsPart),
+            subtitleInput(clsPart),
             span({ class: 'slash' }, '/'),
-            textInput(rolePart),
+            subtitleInput(rolePart),
             span({ class: 'slash' }, '/'),
-            textInput(pronounsPart),
+            subtitleInput(pronounsPart),
           ),
         ),
       ),
