@@ -312,6 +312,12 @@
   .subtitle {
     font-size: 1.3em;
     margin: 0;
+    /* Keep Class / Role / Pronouns and the " / " separators on one line.
+       The PNG export renders the card in a screenshot clone where the
+       text can measure a hair wider than the on-screen layout; without
+       this the last letter of each field (and the slashes) wrapped onto
+       a second, clipped line. */
+    white-space: nowrap;
   }
 
   /* ---------- STATS (LIFE/PSYCHE + GMP) ---------- */
@@ -1164,6 +1170,7 @@
   .class-field-wrap {
     position: relative;
     display: inline-block;
+    white-space: nowrap;
   }
   .class-dropdown {
     display: none;
