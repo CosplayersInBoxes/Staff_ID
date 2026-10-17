@@ -555,6 +555,34 @@
 
   .param-cell.special .param-fill { background: var(--orange); }
 
+  /* Any sickness above 0: Life, Psyche and the parameter bars turn dark
+     red (special/orange cells such as Morale keep their colour). */
+  /* Debuffed value: bright red strip drawn over the dark red base bar. */
+  .param-debuff {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: var(--red);
+    transition: height 0.2s ease;
+  }
+  .stat-debuff {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: var(--red);
+    transition: width 0.2s ease;
+  }
+
+  .card.ill .stat-fill,
+  .card.ill .param-cell:not(.special) .param-fill { background: #8f1313; }
+
+  /* Morale boost: sits on top of the red base bar, same orange as the
+     Morale bar (see effectivePercent / ParamCell). */
+  .param-boost {
+    position: absolute;
+    left: 0; right: 0;
+    background: var(--orange);
+    transition: height 0.2s ease, bottom 0.2s ease;
+  }
+
   /* ---------- SICKNESSES PANEL ---------- */
   .sick-panel {
     display: flex;
@@ -1364,6 +1392,48 @@ function gradeFor(pct) {
   if (pct >= 16.66) return 'D';
   if (pct > 0) return 'E';
   return '-';
+}
+
+// ---------- Morale stat modifier ----------
+// Ported from the Peace Walker save editor's ability display. The card's
+// Morale parameter is a 0-100% bar, so it is mapped onto the game's 0-999
+// morale scale (100% = 999). Up to 500 morale nothing changes; above that
+// each ability is multiplied by (2000 + morale) / 2500, i.e. up to ~x1.2 at
+// full morale. The result is rounded down. The boost is skipped while any
+// sickness (Hostility / Sick / Wounded / PTSD) is active, as in the game.
+// Only the DISPLAYED bar and grade use the boosted value - the stored base
+// percent (what the editor and drag handles change) is left untouched.
+function moraleValue() {
+  const m = paramsList.val.find(q => q.permanent);
+  const pct = m ? clamp(Number(m.percent.val) || 0, 0, 100) : 0;
+  return pct / 100 * 999;
+}
+function moraleMultiplier() {
+  if (sicknesses.some(s => (Number(s.val) || 0) > 0)) return 1;
+  const morale = moraleValue();
+  return morale <= 500 ? 1 : (2000 + morale) / 2500;
+}
+// Illness debuff (estimated, same figures as the save editor): the lowest
+// applicable percentage wins. Sick = 60%, Wounded / PTSD = 100 - value
+// clamped to 20-60%. Returns null when none of Sick / Wounded / PTSD is
+// active (Hostility on its own has no debuff).
+function illnessPercent() {
+  const sick = Number(sicknesses[1].val) || 0;
+  const wounded = Number(sicknesses[2].val) || 0;
+  const ptsd = Number(sicknesses[3].val) || 0;
+  if (sick <= 0 && wounded <= 0 && ptsd <= 0) return null;
+  const pcts = [100];
+  if (wounded > 0) pcts.push(clamp(100 - wounded, 20, 60));
+  if (sick > 0) pcts.push(60);
+  if (ptsd > 0) pcts.push(clamp(100 - ptsd, 20, 60));
+  return Math.min(...pcts);
+}
+function effectivePercent(p) {
+  const base = clamp(Number(p.percent.val) || 0, 0, 100);
+  if (p.permanent) return base; // Morale itself is never boosted or debuffed
+  const ill = illnessPercent();
+  if (ill !== null) return clamp(Math.ceil(base * ill / 100), 0, 100);
+  return clamp(Math.floor(base * moraleMultiplier()), 0, 100);
 }
 
 // ---------- pixel-art icon set (alternative to emoji) ----------
@@ -2241,8 +2311,16 @@ van.derive(() => {
 function StatBar(labelText, valueState) {
   const el = div({ class: 'stat-bar' },
     div({ class: 'stat-fill', style: () => `width:${clamp(valueState.val / 9999 * 100, 0, 100)}%` }),
+    div({ class: 'stat-debuff', style: () => {
+      const ill = illnessPercent();
+      return `width:${ill === null ? 0 : clamp(valueState.val / 9999 * 100, 0, 100) * ill / 100}%`;
+    } }),
     div({ class: 'stat-label' }, labelText),
-    div({ class: 'stat-value' }, statNumberInput(valueState, 9999, 4)),
+    div({ class: 'stat-value' }, statNumberInput(valueState, 9999, 4, v => {
+      // Shown number drops with the illness debuff; editing still changes the base.
+      const ill = illnessPercent();
+      return ill === null ? v : Math.ceil(v * ill / 100);
+    })),
   );
   makeBarDraggable(el, 'horizontal', frac => { valueState.val = clamp(Math.round(frac * 9999), 0, 9999); });
   return el;
@@ -2254,6 +2332,15 @@ function ParamCell(p) {
     'data-tip': () => PARAM_ICON_NAMES[p.icon.val] || '',
   },
     div({ class: 'param-fill', style: () => `height:${clamp(Number(p.percent.val) || 0, 0, 100)}%` }),
+    div({ class: 'param-debuff', style: () => {
+      const ill = illnessPercent();
+      if (ill === null || p.permanent || p.special.val) return 'height:0';
+      return `height:${effectivePercent(p)}%`;
+    } }),
+    div({ class: 'param-boost', style: () => {
+      const base = clamp(Number(p.percent.val) || 0, 0, 100);
+      return `bottom:${base}%;height:${Math.max(0, effectivePercent(p) - base)}%`;
+    } }),
     ParamIcon(p),
     span({ class: 'param-grade' }, () => {
       // Morale's rank image is driven purely by its percentage - it
@@ -2262,7 +2349,7 @@ function ParamCell(p) {
       if (p.icon.val === MORALE_ICON_EMOJI) {
         return img({ class: 'morale-rank-img', src: moraleRankImage(p.percent.val), alt: '', draggable: 'false' });
       }
-      return p.special.val ? p.specialGrade.val : gradeFor(p.percent.val);
+      return p.special.val ? p.specialGrade.val : gradeFor(effectivePercent(p));
     }),
   );
   makeBarDraggable(el, 'vertical', frac => { p.percent.val = clamp(Math.round(frac * 100), 0, 100); });
@@ -2347,7 +2434,7 @@ function TickerTape() {
 }
 
 function Card() {
-  return div({ class: 'paper' }, div({ class: () => 'card' + (overlayChoice.val !== 'default' ? ` overlay-${overlayChoice.val}` : '') },
+  return div({ class: 'paper' }, div({ class: () => 'card' + (sicknesses.some(x => (Number(x.val) || 0) > 0) ? ' ill' : '') + (overlayChoice.val !== 'default' ? ` overlay-${overlayChoice.val}` : '') },
     div({ class: 'grid' },
 
       div({ class: 'portrait-col' },
@@ -2471,7 +2558,7 @@ function quoteTextarea(state) {
 // (e.g. 4 for "0100") formats the value while unfocused, but shows the
 // bare number while the user is actively editing so they aren't
 // fighting leading zeros mid-keystroke.
-function statNumberInput(state, max, padLength) {
+function statNumberInput(state, max, padLength, displayFn) {
   const format = v => {
     const n = clamp(Math.round(Number(v)) || 0, 0, max);
     return padLength ? String(n).padStart(padLength, '0') : String(n);
@@ -2481,7 +2568,7 @@ function statNumberInput(state, max, padLength) {
     type: 'number', min: 0, max, inputmode: 'numeric',
     class: 'plain-number-input',
     style: `width:${chWidth}ch`,
-    value: format(state.val),
+    value: format(displayFn ? displayFn(state.val) : state.val),
     oninput: e => {
       const v = clamp(parseInt(e.target.value, 10) || 0, 0, max);
       state.val = v;
@@ -2492,10 +2579,10 @@ function statNumberInput(state, max, padLength) {
       e.target.value = String(clamp(Math.round(state.val) || 0, 0, max));
       e.target.select();
     },
-    onblur: e => { e.target.value = format(state.val); },
+    onblur: e => { e.target.value = format(displayFn ? displayFn(state.val) : state.val); },
   });
   van.derive(() => {
-    const v = state.val;
+    const v = displayFn ? displayFn(state.val) : state.val;
     if (document.activeElement !== el) el.value = format(v);
   });
   return el;
