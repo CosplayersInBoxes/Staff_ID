@@ -2482,7 +2482,7 @@ function Card() {
       ),
 
       div({ class: 'header-col' },
-        div({ class: 'codename' }, editableInline(span, codename, { maxLen: CODENAME_MAX })),
+        div({ class: 'codename' }, editableInline(span, codename, { maxLen: CODENAME_MAX, defaultValue: DEFAULT_CODENAME, placeholder: DEFAULT_CODENAME })),
         div({ class: 'subtitle' },
           ClassField(),
           ' / ',
@@ -2632,6 +2632,18 @@ function textInput(state, placeholder, maxLen) {
   return el;
 }
 
+// textInput for the codename: if it's left empty, the default comes back.
+function codenameInput(state) {
+  const el = textInput(state, DEFAULT_CODENAME, CODENAME_MAX);
+  el.addEventListener('blur', () => {
+    if (state.val.trim() === '') {
+      state.val = DEFAULT_CODENAME;
+      el.value = DEFAULT_CODENAME;
+    }
+  });
+  return el;
+}
+
 // textInput for Class / Role / Pronouns: same shared character budget as
 // the fields on the card.
 function subtitleInput(state) {
@@ -2661,7 +2673,7 @@ function pastePlainText(e) {
 // Enter confirms/blurs rather than inserting a line break, and pasted
 // content is flattened to plain text on one line.
 function editableInline(tagFn, state, opts = {}) {
-  const { extraClass = '', placeholder = '', maxLen = 0 } = opts;
+  const { extraClass = '', placeholder = '', maxLen = 0, defaultValue = null } = opts;
   // maxLen is a number, or a function returning the current limit (used
   // by the Class/Role/Pronouns fields, which share one character budget).
   const limit = () => (typeof maxLen === 'function' ? Math.max(0, maxLen()) : (maxLen || Infinity));
@@ -2690,6 +2702,14 @@ function editableInline(tagFn, state, opts = {}) {
       if (el.textContent.length - selected + e.data.length > limit()) e.preventDefault();
     },
     oninput: e => { enforceMax(e.currentTarget); state.val = e.currentTarget.textContent; },
+    // If the field is left empty and has a defaultValue, put the
+    // default back (done on blur so clearing it to retype still works).
+    onblur: () => {
+      if (defaultValue !== null && state.val.trim() === '') {
+        state.val = defaultValue;
+        el.textContent = defaultValue;
+      }
+    },
     onkeydown: e => {
       if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
     },
@@ -3595,7 +3615,7 @@ function Dialog() {
 
       div({ class: 'editor-section' },
         h3({}, 'IDENTITY'),
-        Field('Codename', textInput(codename, '', CODENAME_MAX)),
+        Field('Codename', codenameInput(codename)),
         div({ class: 'field' },
           div({}, 'Class / Role / Pronouns'),
           div({ class: 'subtitle-row' },
