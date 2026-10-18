@@ -8,9 +8,9 @@
 <style>
   :root {
     --bg-color: #b8b4a3;
-    --red: #d81e05;
+    --red: #ff1313;
     --dark: #2b2b2b;
-    --orange: #e8791a;
+    --orange: #ff6314;
   }
 
   * { box-sizing: border-box; }
@@ -474,7 +474,7 @@
     flex-direction: row;
     flex-wrap: nowrap;
     gap: 4px;
-    height: 80px;
+    height: 100px;
     /* No scrollbar at all: the row is simply clipped, never scrollable. */
     overflow: hidden;
     scrollbar-width: none;
@@ -489,9 +489,9 @@
   /* Empty fixed slot: same footprint as a parameter, but invisible. */
   .param-cell-empty {
     font-size: 1.2em;
-    width: 2.4em;
-    min-width: 2.4em;
-    flex: 0 0 2.4em;
+    width: 2.1em;
+    min-width: 2.1em;
+    flex: 0 0 2.1em;
   }
 
   .param-spacer { flex: 1 1 0; min-width: 0.6em; }
@@ -508,9 +508,9 @@
     font-size: 1.2em;
     /* Fixed size: cells must not grow or shrink as parameters are
        added or removed. */
-    width: 2.4em;
-    min-width: 2.4em;
-    flex: 0 0 2.4em;
+    width: 2.1em;
+    min-width: 2.1em;
+    flex: 0 0 2.1em;
     /* Draggable (see makeBarDraggable) - stops touch scrolling from
        hijacking a drag on mobile, and hints at the interaction on
        desktop. */
@@ -606,7 +606,7 @@
     flex-direction: row;
     flex-wrap: nowrap;
     gap: 4px;
-    height: 80px;
+    height: 100px;
   }
 
   .sick-cell-wrap {
@@ -616,7 +616,7 @@
     justify-content: flex-end;
     align-items: center;
     width: 2.2em;
-    height: 80px;
+    height: 100px;
     border: 1px solid #555;
     overflow: hidden;
     /* Draggable (see makeBarDraggable) - stops touch scrolling from
@@ -1137,12 +1137,12 @@
     cursor: text;
   }
   .editable-text:hover {
-    box-shadow: 0 0 0 2px rgba(216, 30, 5, 0.4);
-    background: rgba(216, 30, 5, 0.08);
+    box-shadow: 0 0 0 2px rgba(255, 19, 19, 0.4);
+    background: rgba(255, 19, 19, 0.08);
   }
   .editable-text:focus {
     box-shadow: 0 0 0 2px var(--orange);
-    background: rgba(232, 121, 26, 0.12);
+    background: rgba(255, 99, 20, 0.12);
   }
   .editable-text:empty::before {
     content: attr(data-placeholder);
@@ -1215,7 +1215,7 @@
   /* light-on-dark fields (skills, quote) get a lighter hover/focus tint */
   .skills-box .editable-text:hover,
   .quote-box.editable-text:hover {
-    box-shadow: 0 0 0 2px rgba(232, 121, 26, 0.5);
+    box-shadow: 0 0 0 2px rgba(255, 99, 20, 0.5);
     background: rgba(58, 58, 58, 0.5);
   }
   .skills-box .editable-text:focus,
