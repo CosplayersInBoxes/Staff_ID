@@ -151,9 +151,9 @@
        is a sibling of .grid (not inside it) positioned absolutely
        along the very bottom edge of .card - without this, the ticker
        bar would sit on top of (and hide) the bottom of the quote box. */
-    padding: 3.5% 3% 4.75% 2%; /* bottom = ticker height (~2.25% of width) + ~2.5% gap, matching the side margins */
+    padding: 3.5714%; /* 0.125in (3mm) US business-card safety margin on all four sides: 0.125 / 3.5in wide = 3.5714% of the width (= 45.7px at 1280 wide, which is also 0.125 / 2in tall of the height); measured from the card edges, ticker not factored in */
     display: grid;
-    grid-template-columns: 26% 1fr;
+    grid-template-columns: 26% minmax(0, 1fr); /* minmax(0,...) stops the parameter/sickness row's width from pushing the right margin out of line with the other three */
     grid-template-rows: auto auto 1fr;
     column-gap: 2%;
     row-gap: 1.5%;
@@ -199,6 +199,10 @@
     position: relative;
     display: flex;
     align-items: stretch;
+    /* Large portrait (~1.06:1 at the 26% column width). If the rows beside
+       it are shorter than this, the extra height opens up between the
+       stats and the PARAMETERS title instead of shrinking the portrait. */
+    min-height: 297px;
   }
 
   .portrait {
@@ -449,7 +453,9 @@
   .params-and-sick {
     display: flex;
     flex-wrap: nowrap;
-    gap: 1em;
+    gap: 0.5em;
+    /* Keep the bars' bottom edge level with the portrait's bottom edge. */
+    align-self: end;
   }
 
   .params-section {
@@ -474,7 +480,7 @@
     flex-direction: row;
     flex-wrap: nowrap;
     gap: 4px;
-    height: 80px;
+    height: 100px;
     /* No scrollbar at all: the row is simply clipped, never scrollable. */
     overflow: hidden;
     scrollbar-width: none;
@@ -489,12 +495,12 @@
   /* Empty fixed slot: same footprint as a parameter, but invisible. */
   .param-cell-empty {
     font-size: 1.2em;
-    width: 2.4em;
-    min-width: 2.4em;
-    flex: 0 0 2.4em;
+    width: 2.3em;
+    min-width: 2.3em;
+    flex: 0 0 2.3em;
   }
 
-  .param-spacer { flex: 1 1 0; min-width: 0.6em; }
+  .param-spacer { flex: 1 1 0; min-width: 0.2em; }
 
   .param-cell {
     background: var(--dark);
@@ -508,9 +514,9 @@
     font-size: 1.2em;
     /* Fixed size: cells must not grow or shrink as parameters are
        added or removed. */
-    width: 2.4em;
-    min-width: 2.4em;
-    flex: 0 0 2.4em;
+    width: 2.3em;
+    min-width: 2.3em;
+    flex: 0 0 2.3em;
     /* Draggable (see makeBarDraggable) - stops touch scrolling from
        hijacking a drag on mobile, and hints at the interaction on
        desktop. */
@@ -606,7 +612,7 @@
     flex-direction: row;
     flex-wrap: nowrap;
     gap: 4px;
-    height: 80px;
+    height: 100px;
   }
 
   .sick-cell-wrap {
@@ -616,7 +622,7 @@
     justify-content: flex-end;
     align-items: center;
     width: 2.2em;
-    height: 80px;
+    height: 100px;
     border: 1px solid #555;
     overflow: hidden;
     /* Draggable (see makeBarDraggable) - stops touch scrolling from
