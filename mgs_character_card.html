@@ -7,10 +7,12 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.css">
 <style>
   :root {
-    --bg-color: #b8b4a3;
-    --red: #d81e05;
-    --dark: #2b2b2b;
-    --orange: #e8791a;
+    --bg-color: #b8b8a0; /* sampled from the in-game screenshot's khaki paper */
+    --red: #fd1510; /* in-game bright red (was #d81e05, too dark/orange) */
+    --dark: #32322b; /* in-game dark olive panel (was neutral #2b2b2b) */
+    --orange: #ff6414;
+    --ink-label: #5a5848; /* section-title olive-gray */
+    --panel: rgba(51,51,44,0.97);
   }
 
   * { box-sizing: border-box; }
@@ -387,7 +389,7 @@
   }
 
   .gmp-box {
-    background: var(--dark);
+    background: #3a3a32;
     color: #fff;
     display: flex;
     flex-direction: column;
@@ -471,7 +473,7 @@
   .section-title {
     font-size: 1.15em;
     font-weight: bold;
-    color: #444;
+    color: var(--ink-label);
     letter-spacing: 2px;
   }
 
@@ -588,7 +590,7 @@
   }
 
   .card.ill .stat-fill,
-  .card.ill .param-cell:not(.special) .param-fill { background: #8f1313; }
+  .card.ill .param-cell:not(.special) .param-fill { background: #a30f0c; }
 
   /* Morale boost: sits on top of the red base bar, same orange as the
      Morale bar (see effectivePercent / ParamCell). */
@@ -623,7 +625,7 @@
     align-items: center;
     width: 2.2em;
     height: 100px;
-    border: 1px solid #555;
+    border: 1px solid #b5b59d;
     overflow: hidden;
     /* Draggable (see makeBarDraggable) - stops touch scrolling from
        hijacking a drag on mobile, and hints at the interaction on
@@ -694,7 +696,7 @@
   .skills-title {
     font-size: 1.3em;
     font-weight: bold;
-    color: #555;
+    color: var(--ink-label);
     letter-spacing: 2px;
   }
 
@@ -714,7 +716,7 @@
   }
 
   .skill-slot {
-    background: rgba(58,58,58,0.92);
+    background: var(--panel);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -733,7 +735,7 @@
   }
 
   .quote-box {
-    background: rgba(58,58,58,0.92);
+    background: var(--panel);
     /* Exactly five rows: 5 x line-height (1.5em) + top/bottom padding. */
     flex: none;
     height: calc(5 * 1.5em + 40px);
@@ -3925,18 +3927,17 @@ function drawSickHatch(canvasEl) {
   const ctx = canvasEl.getContext('2d');
   ctx.setTransform(scaleFactor, 0, 0, scaleFactor, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  // Colors and stripe proportions sampled directly from the source
-  // video's SICKNESSES panel: a light khaki base with thin, tightly
-  // spaced dark-olive diagonal lines (roughly a 2px line every 8px,
-  // not the thicker/wider-spaced stripe this used originally).
-  ctx.fillStyle = '#b6b69e';
+  // Re-measured against the in-game SICKNESSES panel: slightly darker
+  // khaki base, 2px near-black lines running "/" (bottom-left to
+  // top-right) with 8px vertical pitch (= ~5.66px perpendicular).
+  ctx.fillStyle = '#b3b39b';
   ctx.fillRect(0, 0, w, h);
   ctx.save();
   ctx.translate(w / 2, h / 2);
-  ctx.rotate(Math.PI / 4);
+  ctx.rotate(-Math.PI / 4);
   const diag = Math.sqrt(w * w + h * h);
-  ctx.fillStyle = '#1c1c14';
-  for (let y = -diag; y < diag; y += 8) {
+  ctx.fillStyle = '#1a1a12';
+  for (let y = -diag; y < diag; y += 5.66) {
     ctx.fillRect(-diag, y, diag * 2, 2);
   }
   ctx.restore();
