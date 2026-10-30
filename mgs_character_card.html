@@ -297,7 +297,7 @@
   /* ---------- HEADER / NAME ---------- */
   .header-col {
     /* Lets the column shrink below its content's width, so a long
-       Class/Role/Pronouns line can never widen the grid column (and with
+       Occupation/Role/Pronouns line can never widen the grid column (and with
        it the skill and bio boxes, or shift the stats and sicknesses). */
     min-width: 0;
     display: flex;
@@ -316,7 +316,7 @@
   .subtitle {
     font-size: 1.3em;
     margin: 0;
-    /* Keep Class / Role / Pronouns and the " / " separators on one line.
+    /* Keep Occupation / Role / Pronouns and the " / " separators on one line.
        The PNG export renders the card in a screenshot clone where the
        text can measure a hair wider than the on-screen layout; without
        this the last letter of each field (and the slashes) wrapped onto
@@ -2043,14 +2043,14 @@ function makeParam(icon, percent, special, specialGrade, locked, permanent, vaca
 const DEFAULT_CODENAME = 'CODENAME';
 // Max characters that fit on the card at the current font/size.
 const CODENAME_MAX = 31;
-// Class / Role / Pronouns share one line on the card; this is the most
+// Occupation / Role / Pronouns share one line on the card; this is the most
 // characters the three can add up to (not counting the " / " separators)
 // so the line always fits the header column and can't push the layout.
 const SUBTITLE_MAX_TOTAL = 58;
 const SKILL_NAME_MAX = 44;
 const QUOTE_MAX = 455; // quote/bio box
 const QUOTE_MAX_ROWS = 5; // quote/bio box holds at most this many rows of text
-const DEFAULT_CLASS = 'Class';
+const DEFAULT_CLASS = 'Occupation';
 const DEFAULT_ROLE = 'Role';
 const DEFAULT_PRONOUNS = 'Pronouns';
 const DEFAULT_LIFE = 6100;
@@ -2644,7 +2644,7 @@ function codenameInput(state) {
   return el;
 }
 
-// textInput for Class / Role / Pronouns: same shared character budget as
+// textInput for Occupation / Role / Pronouns: same shared character budget as
 // the fields on the card.
 function subtitleInput(state) {
   const el = textInput(state);
@@ -2675,7 +2675,7 @@ function pastePlainText(e) {
 function editableInline(tagFn, state, opts = {}) {
   const { extraClass = '', placeholder = '', maxLen = 0, defaultValue = null } = opts;
   // maxLen is a number, or a function returning the current limit (used
-  // by the Class/Role/Pronouns fields, which share one character budget).
+  // by the Occupation/Role/Pronouns fields, which share one character budget).
   const limit = () => (typeof maxLen === 'function' ? Math.max(0, maxLen()) : (maxLen || Infinity));
   // Trim to the limit (if any) and keep the caret at the end.
   const enforceMax = node => {
@@ -2761,7 +2761,7 @@ function presetField(state, presets, key, placeholder, opts = {}) {
         type: 'button',
         class: 'class-dropdown-item',
         onclick: () => {
-          // Respect the shared Class/Role/Pronouns budget, if this field has one.
+          // Respect the shared Occupation/Role/Pronouns budget, if this field has one.
           const chosen = typeof opts.maxLen === 'function' ? preset.slice(0, Math.max(0, opts.maxLen())) : preset;
           state.val = chosen;
           // editableInline's own van.derive skips syncing while the box
@@ -2777,7 +2777,7 @@ function presetField(state, presets, key, placeholder, opts = {}) {
 }
 
 function ClassField() {
-  return presetField(clsPart, CLASS_PRESETS, 'class', 'Class', { maxLen: () => subtitleRoom(clsPart) });
+  return presetField(clsPart, CLASS_PRESETS, 'class', 'Occupation', { maxLen: () => subtitleRoom(clsPart) });
 }
 
 function RoleField() {
@@ -3617,7 +3617,7 @@ function Dialog() {
         h3({}, 'IDENTITY'),
         Field('Codename', codenameInput(codename)),
         div({ class: 'field' },
-          div({}, 'Class / Role / Pronouns'),
+          div({}, 'Occupation / Role / Pronouns'),
           div({ class: 'subtitle-row' },
             subtitleInput(clsPart),
             span({ class: 'slash' }, '/'),
