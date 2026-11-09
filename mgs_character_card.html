@@ -218,6 +218,8 @@
   .portrait {
     width: 100%;
     position: relative;
+    margin-top: -18px;
+    margin-bottom: -18px;
     background-color: #444;
     /* Example portrait shown until a photo is uploaded; replaced by
        the inline background-image style once one is chosen. */
@@ -3432,7 +3434,7 @@ function loadImageFile(file) {
 // Calls onDone(croppedDataUrl) on confirm, onCancel() otherwise. The
 // output is the selected region only, scaled to at most 800x800, so the
 // card shows exactly what was framed here.
-const CROP_ASPECT = 1;
+const CROP_ASPECT = 309 / 333; // matches the profile box (309px wide x 333px tall) so a cropped photo isn't squashed
 const CROP_OUT_W = 800;
 const CROP_OUT_H = 800;
 function openCropper(dataUrl, mimeType, onDone, onCancel) {
