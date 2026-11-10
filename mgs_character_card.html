@@ -31,8 +31,10 @@
     background: #000;
     display: flex;
     justify-content: center;
-    padding: 20px;
-    min-height: 100vh;
+    padding: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden; /* the card is scaled to fit the screen (applyFitScale), so the page never scrolls */
   }
 
   .paper {
@@ -53,7 +55,12 @@
      only gets a real box once the script gives it one inline, below
      the mobile breakpoint. */
   .paper-scale-wrap {
-    display: contents;
+    /* Always a real box: fixed to the viewport and sized/centred by applyFitScale() so the
+       card fills the screen at any window size. */
+    position: fixed;
+    left: 0;
+    top: 0;
+    overflow: hidden;
   }
 
   /* The card is a wide, landscape-shaped ID card - on a phone held
@@ -606,10 +613,11 @@
     height: auto;
   }
 
-  .param-cell.special .param-fill { background: var(--orange); }
+  /* Morale (the permanent parameter) is the orange bar. */
+  .param-cell.morale .param-fill { background: var(--orange); }
 
   /* Any sickness above 0: Life, Psyche and the parameter bars turn dark
-     red (special/orange cells such as Morale keep their colour). */
+     red (the orange Morale bar keeps its colour). */
   /* Debuffed value: bright red strip drawn over the dark red base bar. */
   .param-debuff {
     position: absolute;
@@ -625,7 +633,7 @@
   }
 
   .card.ill .stat-fill,
-  .card.ill .param-cell:not(.special) .param-fill { background: #a30f0c; }
+  .card.ill .param-cell:not(.morale) .param-fill { background: #a30f0c; }
 
   /* Morale boost: sits on top of the red base bar, same orange as the
      Morale bar (see effectivePercent / ParamCell). */
@@ -763,13 +771,20 @@
     gap: 12px;
     padding: 10px 20px;
     font-size: 1.15em;
-    min-height: 48px;
+    /* Fixed height (not min-height): emoji glyphs are taller than the pixel-art icons, so a
+       min-height let the bar grow whenever the Peace Walker icons were switched off. */
+    height: 48px;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   .skill-icon {
     flex-shrink: 0;
     min-width: 1.1em;
     font-size: 1.3em;
+    /* Same box for emoji and pixel-art icons so the icon mode can't change the bar's height. */
+    height: 1em;
+    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1084,25 +1099,6 @@
     padding: 6px;
     border: 1px solid #3a3a3a;
   }
-  .param-edit-row.dragging {
-    opacity: 0.4;
-  }
-  .param-drag-handle {
-    cursor: grab;
-    color: #777;
-    width: 18px;
-    text-align: center;
-    flex-shrink: 0;
-    user-select: none;
-  }
-  .param-drag-handle:active { cursor: grabbing; }
-  .param-lock-icon {
-    width: 18px;
-    text-align: center;
-    flex-shrink: 0;
-    opacity: 0.55;
-    font-size: 0.8em;
-  }
   .param-edit-row input[type="text"] {
     width: 44px;
     text-align: center;
@@ -1126,16 +1122,10 @@
     width: 20px;
     height: auto;
   }
-  .param-edit-row label.special-lbl {
-    font-size: 0.65em;
-    color: #999;
-    display: flex;
-    align-items: center;
-    gap: 3px;
-  }
   .param-edit-row .param-name-lbl {
-    font-size: 1.1em;
-    font-weight: bold;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
     color: #fff;
     margin-left: 6px;
     white-space: nowrap;
@@ -1152,17 +1142,6 @@
     margin-left: auto;
   }
   .param-edit-row .remove-param:hover { border-color: var(--red); color: var(--red); }
-  .param-edit-row .param-permanent-icon {
-    width: 24px;
-    height: 24px;
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    opacity: 0.5;
-    cursor: default;
-  }
 
   .skill-edit-row {
     display: flex;
@@ -1979,8 +1958,7 @@ const MORALE_RANK_IMAGES = {
 
 // Picks the morale rank image for a given percentage - the bottom
 // "grade" readout for the Morale parameter now uses these instead of
-// the S/A/B/C/D/E letter grades (or a manually-typed special
-// character). Same band edges as the icon-swap above: 80-100 / 60-79
+// the S/A/B/C/D/E letter grades. Same band edges as the icon-swap above: 80-100 / 60-79
 // / 40-59 / 20-39 / 0-19.
 function moraleRankImage(pct) {
   pct = Number(pct) || 0;
@@ -2088,9 +2066,10 @@ function SkillIcon(s) {
 // state to read - the emoji is a constant (e.g. HOSTILITY_ICON_EMOJI,
 // SICK_ICON_EMOJI) passed in by the caller - so it only needs to react
 // to the global pixelIconMode toggle.
-function SicknessIcon(emoji) {
+function SicknessIcon(iconState) {
   const container = span({ class: 'sickness-icon' });
   van.derive(() => {
+    const emoji = iconState.val;
     const pattern = pixelIconMode.val ? PIXEL_ICONS[emoji] : null;
     container.innerHTML = '';
     if (pattern) {
@@ -2109,12 +2088,10 @@ function makeSkill(icon, name) {
   };
 }
 
-function makeParam(icon, percent, special, specialGrade, locked, permanent, vacant) {
+function makeParam(icon, percent, locked, permanent, vacant) {
   return {
     icon: van.state(icon),
     percent: van.state(percent),
-    special: van.state(!!special),
-    specialGrade: van.state(specialGrade || 'S'),
     // Plain (non-reactive) flag: whether this parameter's position in
     // the list is fixed. It's fixed per-param for its whole lifetime,
     // never toggled at runtime, so it doesn't need to be a van.state.
@@ -2171,22 +2148,22 @@ const paramSlotCount = () => paramsList.val.filter(p => !p.permanent).length;
 
 function createDefaultParams() {
   return [
-    makeParam('⚔️', 20, false, 'S', true), // Combat - locked
-    makeParam('🔧', 35, false, 'S', true), // R&D - locked
-    makeParam('🍴', 20, false, 'S', true), // Mess Hall - locked
-    makeParam('💊', 20, false, 'S', true), // Medical - locked
-    makeParam('📊', 15, false, 'S', true), // Intel - locked
-    makeParam('🎯', 55, false, 'S', true), // Shoot - locked
-    makeParam('🔄', 10, false, 'S', true), // Reload - locked
-    makeParam('💣', 10, false, 'S', true), // Throw - locked
-    makeParam('⛓', 20, false, 'S', true), // Place - locked
-    makeParam('🚶', 100, false, 'S', true), // Walk - locked
-    makeParam('🏃', 20, false, 'S', true), // Run - locked
-    makeParam('✊', 10, false, 'S', true), // Fight - locked
-    makeParam('🛡️', 20, false, 'S', true), // Defense - locked
-    makeParam('🙌', 100, true, '⇈', false, true), // Morale - permanent
+    makeParam('⚔️', 20, true), // Combat - locked
+    makeParam('🔧', 35, true), // R&D - locked
+    makeParam('🍴', 20, true), // Mess Hall - locked
+    makeParam('💊', 20, true), // Medical - locked
+    makeParam('📊', 15, true), // Intel - locked
+    makeParam('🎯', 55, true), // Shoot - locked
+    makeParam('🔄', 10, true), // Reload - locked
+    makeParam('💣', 10, true), // Throw - locked
+    makeParam('⛓', 20, true), // Place - locked
+    makeParam('🚶', 100, true), // Walk - locked
+    makeParam('🏃', 20, true), // Run - locked
+    makeParam('✊', 10, true), // Fight - locked
+    makeParam('🛡️', 20, true), // Defense - locked
+    makeParam('🙌', 100, false, true), // Morale - permanent
     // The 4 sickness columns (Hostility, Sick, Wounded, PTSD) live
-    // separately - see SICKNESS_ICONS/SicknessCell below.
+    // separately - see sicknessIcons/SicknessCell below.
   ];
 }
 
@@ -2246,6 +2223,9 @@ const quote = van.state(DEFAULT_QUOTE);
 const ticker = van.state(DEFAULT_TICKER);
 const skills = DEFAULT_SKILLS.map(v => makeSkill(v.icon, v.name));
 const sicknesses = DEFAULT_SICKNESSES.map(v => van.state(v));
+// Editable icon for each sickness column (same kind of emoji text as a parameter's icon).
+const DEFAULT_SICKNESS_ICONS = [HOSTILITY_ICON_EMOJI, SICK_ICON_EMOJI, WOUNDED_ICON_EMOJI, PTSD_ICON_EMOJI];
+const sicknessIcons = DEFAULT_SICKNESS_ICONS.map(v => van.state(v));
 
 const paramsList = van.state(createDefaultParams());
 
@@ -2274,11 +2254,10 @@ function collectSerializable() {
     pixelIconMode: pixelIconMode.val,
     skills: skills.map(s => ({ icon: s.icon.val, name: s.name.val })),
     sicknesses: sicknesses.map(s => s.val),
+    sicknessIcons: sicknessIcons.map(s => s.val),
     paramsList: paramsList.val.map(p => ({
       icon: p.icon.val,
       percent: p.percent.val,
-      special: p.special.val,
-      specialGrade: p.specialGrade.val,
       locked: p.locked,
       permanent: p.permanent,
       vacant: p.vacant,
@@ -2353,8 +2332,6 @@ function loadSavedState() {
     paramsList.val = data.paramsList.map((p, i) => makeParam(
       typeof p.icon === 'string' ? p.icon : '\u2753',
       clamp(Number(p.percent) || 0, 0, 100),
-      !!p.special,
-      typeof p.specialGrade === 'string' ? p.specialGrade : 'S',
       !!p.locked || !!p.vacant || (i < defaultSlots.length && p.icon === defaultSlots[i].icon.val),
       !!p.permanent,
       !!p.vacant,
@@ -2366,8 +2343,14 @@ function loadSavedState() {
     }
     // Safety net: if an older/edited save somehow lacks Morale, restore it.
     if (!paramsList.val.some(p => p.permanent)) {
-      paramsList.val = [...paramsList.val, makeParam(MORALE_ICON_EMOJI, 100, true, '\u21c8', false, true)];
+      paramsList.val = [...paramsList.val, makeParam(MORALE_ICON_EMOJI, 100, false, true)];
     }
+  }
+
+  if (Array.isArray(data.sicknessIcons)) {
+    data.sicknessIcons.forEach((v, i) => {
+      if (sicknessIcons[i] && typeof v === 'string') sicknessIcons[i].val = v.slice(0, 8);
+    });
   }
 
   if (Array.isArray(data.sicknesses)) {
@@ -2446,13 +2429,13 @@ function StatBar(labelText, valueState) {
 
 function ParamCell(p) {
   const el = div({
-    class: () => 'param-cell' + (p.special.val ? ' special' : ''),
+    class: 'param-cell' + (p.permanent ? ' morale' : ''),
     'data-tip': () => PARAM_ICON_NAMES[p.icon.val] || '',
   },
     div({ class: 'param-fill', style: () => `height:${clamp(Number(p.percent.val) || 0, 0, 100)}%` }),
     div({ class: 'param-debuff', style: () => {
       const ill = illnessPercent();
-      if (ill === null || p.permanent || p.special.val) return 'height:0';
+      if (ill === null || p.permanent) return 'height:0';
       return `height:${effectivePercent(p)}%`;
     } }),
     div({ class: 'param-boost', style: () => {
@@ -2461,13 +2444,11 @@ function ParamCell(p) {
     } }),
     ParamIcon(p),
     span({ class: 'param-grade' }, () => {
-      // Morale's rank image is driven purely by its percentage - it
-      // ignores the "special" flag/character entirely, so this checks
-      // the icon specifically rather than p.special.val.
+      // Morale's rank image is driven purely by its percentage.
       if (p.icon.val === MORALE_ICON_EMOJI) {
         return img({ class: 'morale-rank-img', src: moraleRankImage(p.percent.val), alt: '', draggable: 'false' });
       }
-      return p.special.val ? p.specialGrade.val : gradeFor(effectivePercent(p));
+      return gradeFor(effectivePercent(p));
     }),
   );
   makeBarDraggable(el, 'vertical', frac => { p.percent.val = clamp(Math.round(frac * 100), 0, 100); });
@@ -2480,13 +2461,12 @@ function ParamCell(p) {
 // red fill bar, only one of which is shown at a time:
 //   - value === 0  -> hatch canvas visible, bar hidden (the "off" state)
 //   - value 1-99   -> bar visible at that height %, hatch hidden
-// Columns with an entry in SICKNESS_ICONS also get that fixed icon
+// Every column also gets its (editable) icon from sicknessIcons
 // (emoji or pixel-art, matching the global toggle) plus a number
 // readout of the current value, styled like a parameter's letter-grade
 // text. Both are hidden at value 0 along with the bar - there's
 // nothing meaningful to show once that sickness is "off" - and
 // reappear together as soon as the value is 1 or higher.
-const SICKNESS_ICONS = [HOSTILITY_ICON_EMOJI, SICK_ICON_EMOJI, WOUNDED_ICON_EMOJI, PTSD_ICON_EMOJI];
 const SICKNESS_LABELS = ['Hostility', 'Sick', 'Wounded', 'PTSD'];
 
 function SicknessCell(i) {
@@ -2508,13 +2488,13 @@ function SicknessCell(i) {
   });
 
   let iconCol = '';
-  const emoji = SICKNESS_ICONS[i];
-  if (emoji) {
+  const iconState = sicknessIcons[i];
+  if (iconState) {
     const gradeEl = span({ class: 'sickness-grade' }, () => {
       const v = clamp(Number(state.val) || 0, 0, 99);
       return v > 0 ? String(v) : '';
     });
-    iconCol = div({ class: 'sickness-icon-col' }, SicknessIcon(emoji), gradeEl);
+    iconCol = div({ class: 'sickness-icon-col' }, SicknessIcon(iconState), gradeEl);
     van.derive(() => {
       const v = clamp(Number(state.val) || 0, 0, 99);
       iconCol.style.display = v > 0 ? 'flex' : 'none';
@@ -3006,37 +2986,13 @@ function SkillEditRow(s, i) {
   return div({ class: 'skill-edit-row' }, iconInput, nameInput);
 }
 
-// Tracks the parameter currently being dragged, for the duration of a
-// single drag gesture. Kept in module scope rather than dataTransfer
-// since this is a same-page, same-list drag - no need to serialize it.
-let draggedParam = null;
-
 function ParamEditRow(p, onRemove) {
   if (p.vacant) {
     return div({ class: 'param-edit-row locked-param' },
-      span({ class: 'param-lock-icon', title: 'Fixed position' }, '\u{1F512}'),
       span({ style: 'opacity:0.6;font-size:0.9em;' }, 'Empty fixed slot - the next parameter you add fills it'),
     );
   }
   const row = div({ class: 'param-edit-row' + (p.locked ? ' locked-param' : '') },
-    p.locked
-      ? span({ class: 'param-lock-icon', title: "This parameter's position is fixed" }, '\u{1F512}')
-      : span({
-          class: 'param-drag-handle',
-          title: 'Drag to reorder',
-          draggable: 'true',
-          ondragstart: e => {
-            draggedParam = p;
-            row.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            // Firefox requires setData to be called for drag to start.
-            e.dataTransfer.setData('text/plain', '');
-          },
-          ondragend: () => {
-            draggedParam = null;
-            row.classList.remove('dragging');
-          },
-        }, '\u283f'),
     input({
       type: 'text', value: p.icon.val, maxlength: 4,
       readOnly: p.permanent,
@@ -3050,12 +3006,11 @@ function ParamEditRow(p, onRemove) {
     span({ class: 'grade-preview' }, () => {
       // Morale's rank is chosen automatically from its percentage (see
       // MORALE_RANK_IMAGES / moraleRankImage above), so it gets a live
-      // image preview here instead of a letter grade, regardless of
-      // the special flag - it has no checkbox to control that (below).
+      // image preview here instead of a letter grade.
       if (p.icon.val === MORALE_ICON_EMOJI) {
         return img({ class: 'grade-preview-img', src: moraleRankImage(p.percent.val), alt: '', draggable: 'false' });
       }
-      return p.special.val ? '' : gradeFor(p.percent.val);
+      return gradeFor(p.percent.val);
     }),
     () => {
       // Static, uneditable name for whatever icon this row currently
@@ -3063,84 +3018,19 @@ function ParamEditRow(p, onRemove) {
       // card can tell parameters apart at a glance. Recomputed here
       // since p.icon.val is itself editable text.
       const title = PARAM_ICON_NAMES[p.icon.val] || '';
-      // Every parameter except Morale keeps the "special" checkbox
-      // (and, when checked, a free-text character to show instead of
-      // the letter grade). Morale's rank is fully automatic from its
-      // percentage, so it gets no checkbox at all - just the name.
-      if (p.icon.val === MORALE_ICON_EMOJI) {
-        return div({ style: 'display:flex;align-items:center;' },
-          span({ class: 'param-name-lbl' }, title),
-        );
-      }
-      return div({ style: 'display:flex;flex-direction:column;gap:2px;' },
-        label({ class: 'special-lbl' },
-          input({
-            type: 'checkbox', checked: p.special.val,
-            onchange: e => { p.special.val = e.target.checked; },
-          }),
-          'special',
-          span({ class: 'param-name-lbl' }, title),
-        ),
-        () => p.special.val ? input({
-          type: 'text', value: p.specialGrade.val, maxlength: 3,
-          style: 'width:36px;padding:2px;',
-          oninput: e => { p.specialGrade.val = e.target.value; },
-        }) : '',
+      return div({ style: 'display:flex;align-items:center;' },
+        span({ class: 'param-name-lbl' }, title),
       );
     },
     p.permanent
-      ? span({ class: 'param-permanent-icon', title: "This parameter can't be removed" }, '\u{1F512}')
+      ? ''
       : button({
           class: 'remove-param',
           onclick: onRemove,
         }, '\u2715'),
   );
 
-  // Locked rows accept no drops at all - with no ondragover handler,
-  // the browser shows its native "not allowed" cursor automatically
-  // and no 'drop' event can fire here, so a dragged parameter simply
-  // can't be placed at (or displace) a locked row's position.
-  if (!p.locked) {
-    row.ondragover = e => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-    };
-    row.ondrop = e => {
-      e.preventDefault();
-      if (draggedParam && draggedParam !== p) reorderParams(draggedParam, p);
-    };
-  }
-
   return row;
-}
-
-// Reorders paramsList so `dragged` ends up where `target` was, WITHOUT
-// ever changing the array index of any locked parameter. Locked
-// parameters keep their exact original position; only the unlocked
-// ones are reshuffled among the remaining (unlocked) slots.
-function reorderParams(dragged, target) {
-  if (!dragged || !target || dragged === target || dragged.locked || target.locked) return;
-
-  const current = paramsList.val;
-  const unlocked = current.filter(p => !p.locked);
-
-  const fromIdx = unlocked.indexOf(dragged);
-  if (fromIdx === -1) return;
-  unlocked.splice(fromIdx, 1);
-
-  const toIdx = unlocked.indexOf(target);
-  unlocked.splice(toIdx === -1 ? unlocked.length : toIdx, 0, dragged);
-
-  let ui = 0;
-  const result = current.map(p => (p.locked ? p : unlocked[ui++]));
-
-  paramsList.val = result;
-  // The dialog's rows are managed imperatively (see ParamsEditorSection
-  // below), so an explicit resync is needed to reflect the new order -
-  // this is only ever called from a discrete user action (drag-drop),
-  // never reactively, so it can't reintroduce the per-keystroke
-  // rebuild issue that pattern caused elsewhere in this file.
-  if (resyncParamsEditor) resyncParamsEditor();
 }
 
 // Builds and owns the list of parameter-editor rows imperatively
@@ -3148,7 +3038,7 @@ function reorderParams(dragged, target) {
 // van reactive binding keyed on paramsList.val. A reactive binding
 // here would re-run - rebuilding EVERY row's DOM node from scratch -
 // on ANY field change in ANY row, because ParamEditRow() reads each
-// row's icon/percent/special .val synchronously to set initial input
+// row's icon/percent .val synchronously to set initial input
 // values; those reads would get captured as dependencies of the same
 // binding that maps over the whole list. That's exactly why typing a
 // second digit into a parameter box required refocusing: the row
@@ -3157,6 +3047,30 @@ function reorderParams(dragged, target) {
 // add/remove avoids that entirely - normal typing never touches this
 // container.
 let resyncParamsEditor = null;
+
+// One editor row for a sickness column, laid out like a parameter row.
+function SicknessEditRow(i) {
+  const iconState = sicknessIcons[i];
+  const iconInput = input({
+    type: 'text', value: iconState.val, maxlength: 8,
+    oninput: e => { iconState.val = e.target.value; },
+  });
+  // Reflect changes made elsewhere (e.g. RESET CARD) while the field isn't focused.
+  van.derive(() => {
+    const v = iconState.val;
+    if (document.activeElement !== iconInput && iconInput.value !== v) iconInput.value = v;
+  });
+  const valueInput = numberInput(sicknesses[i], 0, 99);
+  valueInput.title = '0 = off (hatch pattern), 1-99 = on (red bar filled to that percent)';
+  return div({ class: 'param-edit-row' },
+    iconInput,
+    valueInput,
+    span({ class: 'grade-preview' }),
+    div({ style: 'display:flex;align-items:center;' },
+      span({ class: 'param-name-lbl' }, SICKNESS_LABELS[i] || `Sickness ${i + 1}`),
+    ),
+  );
+}
 
 function ParamsEditorSection() {
   const rowsContainer = div({ style: 'display:contents' });
@@ -3169,7 +3083,7 @@ function ParamsEditorSection() {
         // One of the fixed slots (the first five): leave an empty slot
         // in the same position so nothing shifts; a newly added
         // parameter will fill it.
-        const vacant = makeParam('', 0, false, 'S', true, false, true);
+        const vacant = makeParam('', 0, true, false, true);
         paramsList.val = paramsList.val.map(item => item === p ? vacant : item);
         rebuildAll();
         return;
@@ -3198,6 +3112,9 @@ function ParamsEditorSection() {
 
   return div({},
     rowsContainer,
+    // The four sicknesses continue the list right under Morale, as rows like the parameters
+    // (editable icon, 0-99 value, name). 0 = off (hatch pattern), 1-99 = red bar at that percent.
+    ...sicknesses.map((_, i) => SicknessEditRow(i)),
     button({
       class: 'add-param-btn',
       // Full when every slot is taken and the cap is reached.
@@ -3209,7 +3126,7 @@ function ParamsEditorSection() {
         if (slot !== -1) {
           // Fill the first empty fixed slot; the new parameter is locked
           // there like the originals.
-          const filled = makeParam('\u2753', 50, false, 'S', true);
+          const filled = makeParam('\u2753', 50, true);
           paramsList.val = paramsList.val.map((item, i) => i === slot ? filled : item);
           rebuildAll();
           return;
@@ -3635,6 +3552,9 @@ function resetCard() {
   paramsList.val = createDefaultParams();
   if (resyncParamsEditor) resyncParamsEditor();
   pixelIconMode.val = true;
+  DEFAULT_SICKNESS_ICONS.forEach((v, i) => {
+    if (sicknessIcons[i]) sicknessIcons[i].val = v;
+  });
   DEFAULT_SICKNESSES.forEach((v, i) => {
     if (sicknesses[i]) sicknesses[i].val = v;
   });
@@ -3755,15 +3675,6 @@ function Dialog() {
         h3({}, 'SKILLS'),
         div({ class: 'current-photo-hint' }, 'Icon uses the same pixel-art toggle as Parameters above.'),
         ...skills.map((s, i) => Field(`Skill ${i + 1}`, SkillEditRow(s, i))),
-      ),
-
-      div({ class: 'editor-section' },
-        h3({}, 'SICKNESSES'),
-        div({ class: 'current-photo-hint' }, 'Each column: 0 shows the default hatch pattern; 1-99 shows a red progress bar filled to that percent.'),
-        ...sicknesses.map((s, i) => Field(
-          SICKNESS_LABELS[i] || `Sickness ${i + 1}`,
-          numberInput(s, 0, 99),
-        )),
       ),
 
       div({ class: 'editor-section' },
@@ -4047,34 +3958,29 @@ window.addEventListener('resize', drawAllSickHatches);
 // Desktop is entirely unaffected: above the breakpoint every inline
 // style this sets is cleared, leaving the original CSS (width:1280px;
 // max-width:100%; aspect-ratio) in full control, exactly as before.
-const MOBILE_BREAKPOINT = 930;
-
 function applyMobileScale() {
   const paperEl = document.querySelector('.paper');
   const wrapEl = document.querySelector('.paper-scale-wrap');
   if (!paperEl || !wrapEl) return;
 
-  if (window.innerWidth > MOBILE_BREAKPOINT) {
-    paperEl.style.width = '';
-    paperEl.style.maxWidth = '';
-    paperEl.style.transform = '';
-    paperEl.style.transformOrigin = '';
-    wrapEl.style.width = '';
-    wrapEl.style.height = '';
-    return;
-  }
-
+  // Always fit: render .paper at its natural 1280px design width and scale the
+  // whole card (up or down) so it is as large as possible inside the window
+  // without being cropped, centred on the black page background.
   const naturalWidth = 1280;
-  // Body has 20px padding on each side (see the body rule above) -
-  // match that so the scaled card doesn't touch the screen edges.
-  const available = Math.max(1, window.innerWidth - 40);
-  const scale = Math.min(1, available / naturalWidth);
+  const naturalHeight = paperEl.offsetHeight || (naturalWidth / 1.75); // offsetHeight ignores the transform
+  const vw = Math.max(1, window.innerWidth);
+  const vh = Math.max(1, window.innerHeight);
+  const scale = Math.min(vw / naturalWidth, vh / naturalHeight);
+  const w = naturalWidth * scale;
+  const h = naturalHeight * scale;
   paperEl.style.width = `${naturalWidth}px`;
   paperEl.style.maxWidth = 'none';
   paperEl.style.transformOrigin = 'top left';
   paperEl.style.transform = `scale(${scale})`;
-  wrapEl.style.width = `${available}px`;
-  wrapEl.style.height = `${paperEl.getBoundingClientRect().height}px`;
+  wrapEl.style.width = `${w}px`;
+  wrapEl.style.height = `${h}px`;
+  wrapEl.style.left = `${(vw - w) / 2}px`;
+  wrapEl.style.top = `${(vh - h) / 2}px`;
 }
 
 window.addEventListener('resize', applyMobileScale);
