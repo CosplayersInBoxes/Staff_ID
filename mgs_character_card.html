@@ -13,6 +13,7 @@
     --orange: #ff6414;
     --ink-label: #5a5848; /* section-title olive-gray */
     --panel: rgba(51,51,44,0.97);
+    --links: #46FF96;
   }
 
   @font-face {
@@ -36,6 +37,11 @@
     height: 100dvh;
     overflow: hidden; /* the card is scaled to fit the screen (applyFitScale), so the page never scrolls */
   }
+
+a {
+  color: var(--links);
+  text-decoration: none;
+}
 
   .paper {
     width: 1280px;
@@ -4012,7 +4018,7 @@ function Dialog() {
 
   const dialogEl = div({ class: 'editor-dialog' },
     div({ class: 'editor-header' },
-      h2({}, 'EDIT CARD'),
+      h2({}, 'EDIT MEMBERSHIP CARD'),
       button({ class: 'editor-close', onclick: () => { dialogOpen.val = false; } }, '\u2715'),
     ),
     div({ class: 'editor-body' },
@@ -4083,7 +4089,7 @@ function Dialog() {
         div({ class: 'current-photo-hint', style: 'margin-bottom:4px;opacity:1;font-size:13px;color:var(--cc-text);' }, 'Andrew Gleeson For Custom Peace Walker Font'),
         div({ class: 'current-photo-hint', style: 'margin:0 0 4px;opacity:1;font-size:13px;color:var(--cc-text);' }, 'Icons And MSF Logo are from Metal Gear Solid: Peace Walker'),
         div({ class: 'current-photo-hint', style: 'margin:0 0 4px;opacity:1;font-size:13px;color:var(--cc-text);' }, 'Metal Gear Solid: Peace Walker, Metal Gear, Metal Gear Solid, and Silent Hill are all owned by Konami'),
-        div({ class: 'current-photo-hint', style: 'margin:0;opacity:1;font-size:13px;color:var(--cc-text);' }, 'Thank you otac0n for guiding me at the start of my coding journey!'),
+        div({ class: 'current-photo-hint', style: 'margin:0;opacity:1;font-size:13px;color:var(--cc-text);' }, 'Thank you ', a({ href: 'https://otac0n.com/links/' }, 'otac0n'), ' for guiding me at the start of my coding journey!'),
       ),
     ),
   );
@@ -4214,7 +4220,7 @@ function DownloadButton() {
 function DiscordButton() {
   const link = a({
     class: 'discord-btn',
-    href: 'https://discord.gg/cosplayersinboxes',
+    href: 'https://discord.gg/zYZJFx9pWV',
     target: '_blank',
     rel: 'noopener noreferrer',
     'aria-label': 'Join our Discord',
