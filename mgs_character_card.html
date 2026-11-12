@@ -48,10 +48,24 @@ a {
     max-width: 100%;
     aspect-ratio: 3.5 / 2; /* US business card (1.75:1). Width stays 1280px, so only the height changes (718px -> ~731px); the extra ~13px is absorbed by the 1fr bottom grid row (quote box), so every other box keeps its exact position and size. */
     position: relative;
+  }
+  /* The khaki colour + paper texture live on their own layer so the slider can fade them out
+     without touching the card artwork. When off, the exported PNG is transparent there, so on
+     coloured card stock nothing is printed where the khaki was. */
+  .paper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
     background-color: var(--bg-color);
     background-image: url('Paper.svg');
     background-size: 100% 100%, cover;
   }
+  /* Khaki toggle off. Done with a class, not an inline style, so applyMobileScale()'s inline
+     width/transform on .paper are never overwritten. */
+  .paper.no-khaki::before { opacity: 0; }
+  .paper > .card { z-index: 1; }
 
   /* Wraps .paper so the mobile-scaling script (applyMobileScale, near
      the bottom of this file) has a plain box to resize/collapse around
@@ -67,6 +81,8 @@ a {
     left: 0;
     top: 0;
     overflow: hidden;
+    /* Preview-only checkerboard: shows through when the khaki toggle is off. Not exported. */
+    background: repeating-conic-gradient(#d4d4d4 0% 25%, #fff 0% 50%) 0 0 / 24px 24px;
   }
 
   /* The card is a wide, landscape-shaped ID card - on a phone held
@@ -928,6 +944,24 @@ a {
   .hamburger-btn:hover span:nth-child(2) { width: 24px; }
   .download-btn:disabled { opacity: 0.4; cursor: default; }
   .discord-btn svg, .instagram-btn svg { width: 26px; height: 26px; fill: currentColor; display: block; }
+
+  /* Phones / small windows: stack the icon buttons down the right edge instead of across the top.
+     applyMobileScale() reserves this strip so the card is fitted beside it, never underneath. */
+  @media (max-width: 950px) {
+    .hamburger-btn, .download-btn, .discord-btn, .instagram-btn {
+      width: 44px;
+      height: 44px;
+      right: calc(8px + env(safe-area-inset-right, 0px));
+    }
+    .hamburger-btn { top: 8px; gap: 4px; }
+    .download-btn  { top: 60px; font-size: 1.25em; }
+    .discord-btn   { top: 112px; }
+    .instagram-btn { top: 164px; }
+    .hamburger-btn span:nth-child(1), .hamburger-btn span:nth-child(3) { width: 20px; }
+    .hamburger-btn span:nth-child(2) { width: 14px; margin-right: 12px; }
+    .hamburger-btn:hover span:nth-child(2) { width: 20px; }
+    .discord-btn svg, .instagram-btn svg { width: 22px; height: 22px; }
+  }
 
   /* ---------- Overlay + panel ---------- */
   .editor-overlay {
@@ -2609,6 +2643,10 @@ const OVERLAY_CHOICES = [
 ];
 const overlayChoice = van.state('default');
 
+// Whether the card's khaki paper colour is shown. Turn off for printing on coloured card stock
+// (the exported PNG is transparent where the khaki was).
+const khakiEnabled = van.state(true);
+
 const quote = van.state(DEFAULT_QUOTE);
 const ticker = van.state(DEFAULT_TICKER);
 const skills = DEFAULT_SKILLS.map(v => makeSkill(v.icon, v.name));
@@ -2639,6 +2677,7 @@ function collectSerializable() {
     profileImg: profileImg.val,
     halftoneEnabled: halftoneEnabled.val,
     overlay: overlayChoice.val,
+    khakiEnabled: khakiEnabled.val,
     quote: quote.val,
     ticker: ticker.val,
     pixelIconMode: pixelIconMode.val,
@@ -2685,6 +2724,7 @@ function loadSavedState() {
   if (typeof data.gmp === 'number') gmp.val = clamp(Math.round(data.gmp), 0, 999999);
   if (typeof data.halftoneEnabled === 'boolean') halftoneEnabled.val = data.halftoneEnabled;
   if (typeof data.overlay === 'string' && OVERLAY_CHOICES.some(o => o.id === data.overlay)) overlayChoice.val = data.overlay;
+  if (typeof data.khakiEnabled === 'boolean') khakiEnabled.val = data.khakiEnabled;
   if (typeof data.profileImg === 'string') setProfileImage(data.profileImg);
   if (typeof data.quote === 'string') quote.val = data.quote.slice(0, QUOTE_MAX);
   if (typeof data.ticker === 'string') ticker.val = data.ticker;
@@ -2922,7 +2962,7 @@ function TickerTape() {
 }
 
 function Card() {
-  return div({ class: 'paper' }, div({ class: () => 'card' + (sicknesses.some(x => (Number(x.val) || 0) > 0) ? ' ill' : '') + (overlayChoice.val !== 'default' ? ` overlay-${overlayChoice.val}` : '') },
+  return div({ class: () => 'paper' + (khakiEnabled.val ? '' : ' no-khaki') }, div({ class: () => 'card' + (sicknesses.some(x => (Number(x.val) || 0) > 0) ? ' ill' : '') + (overlayChoice.val !== 'default' ? ` overlay-${overlayChoice.val}` : '') },
     div({ class: 'grid' },
 
       div({ class: 'portrait-col' },
@@ -3953,6 +3993,7 @@ function resetCard() {
   clearProfileImage();
   halftoneEnabled.val = false;
   overlayChoice.val = 'default';
+  khakiEnabled.val = true;
   if (dropzoneInstance) {
     try { dropzoneInstance.removeAllFiles(true); } catch (err) { /* no files to remove */ }
   }
@@ -4010,6 +4051,29 @@ function overlaySelect() {
       ),
       span({ class: 'overlay-name' }, o.label),
     )),
+  );
+}
+
+// Checkbox for the khaki paper toggle. Kept in sync with khakiEnabled even when it changes
+// elsewhere (e.g. RESET CARD), same pattern as pixelIconCheckbox.
+function khakiCheckbox() {
+  const el = input({
+    type: 'checkbox', checked: khakiEnabled.val,
+    onchange: e => { khakiEnabled.val = e.target.checked; },
+  });
+  van.derive(() => {
+    const v = khakiEnabled.val;
+    if (el.checked !== v) el.checked = v;
+  });
+  return el;
+}
+
+function khakiToggle() {
+  return div({},
+    label({ class: 'pixel-mode-toggle', style: 'margin-top:12px;' },
+      khakiCheckbox(),
+      () => khakiEnabled.val ? 'Turn Off For Printing On Colored Card Stock.' : 'The Checkerboard In The Preview Is Not Exported',
+    ),
   );
 }
 
@@ -4076,6 +4140,7 @@ function Dialog() {
         h3({}, span({ class: 'br' }, '<'), 'OVERLAY', span({ class: 'br' }, '>')),
         div({ class: 'current-photo-hint' }, 'Background artwork behind the card.'),
         overlaySelect(),
+        khakiToggle(),
       ),
 
       div({ class: 'editor-section danger-zone' },
@@ -4328,7 +4393,7 @@ function drawSickHatch(canvasEl) {
   // Re-measured against the in-game SICKNESSES panel: slightly darker
   // khaki base, 2px near-black lines running "/" (bottom-left to
   // top-right) with 8px vertical pitch (= ~5.66px perpendicular).
-  ctx.fillStyle = '#b3b39b';
+  ctx.fillStyle = `rgba(179, 179, 155, ${khakiEnabled.val ? 1 : 0})`; // khaki base follows the khaki toggle
   ctx.fillRect(0, 0, w, h);
   ctx.save();
   ctx.translate(w / 2, h / 2);
@@ -4346,6 +4411,8 @@ function drawAllSickHatches() {
 }
 
 window.addEventListener('resize', drawAllSickHatches);
+// Repaint the hatch cells' khaki base whenever the toggle changes.
+van.derive(() => { khakiEnabled.val; requestAnimationFrame(drawAllSickHatches); });
 
 // ---------- mobile scaling ----------
 // .paper is a fixed 1280px-wide design (grid columns, em-based font
@@ -4374,7 +4441,16 @@ function applyMobileScale() {
   const naturalHeight = paperEl.offsetHeight || (naturalWidth / 1.75); // offsetHeight ignores the transform
   const vw = Math.max(1, window.innerWidth);
   const vh = Math.max(1, window.innerHeight);
-  const scale = Math.min(vw / naturalWidth, vh / naturalHeight);
+  // On small screens the icon buttons are stacked down the right edge (see CSS); keep the card
+  // out of that strip so the buttons never sit on top of it.
+  let reserved = 0;
+  if (window.innerWidth <= 950) {
+    const btn = document.querySelector('.hamburger-btn');
+    const left = btn ? btn.getBoundingClientRect().left : 0;
+    reserved = left > 0 ? (vw - left + 8) : 60;
+  }
+  const availW = Math.max(1, vw - reserved);
+  const scale = Math.min(availW / naturalWidth, vh / naturalHeight);
   const w = naturalWidth * scale;
   const h = naturalHeight * scale;
   paperEl.style.width = `${naturalWidth}px`;
@@ -4383,7 +4459,7 @@ function applyMobileScale() {
   paperEl.style.transform = `scale(${scale})`;
   wrapEl.style.width = `${w}px`;
   wrapEl.style.height = `${h}px`;
-  wrapEl.style.left = `${(vw - w) / 2}px`;
+  wrapEl.style.left = `${(availW - w) / 2}px`;
   wrapEl.style.top = `${(vh - h) / 2}px`;
 }
 
