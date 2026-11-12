@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MGS Peace Walker - Character Card</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.css">
+<script>try { document.documentElement.classList.toggle('ed-yellow', localStorage.getItem('cib-editor-theme') !== 'green'); } catch (e) { document.documentElement.classList.add('ed-yellow'); }</script>
 <style>
   :root {
     --bg-color: #b8b8a0; /* sampled from the in-game screenshot's khaki paper */
@@ -350,7 +351,7 @@ a {
   .header-col {
     /* Lets the column shrink below its content's width, so a long
        Occupation/Role/Pronouns line can never widen the grid column (and with
-       it the skill and bio boxes, or shift the stats and sicknesses). */
+       it the skill and about me box, or shift the stats and sicknesses). */
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -762,7 +763,7 @@ a {
     gap: 0.5em;
     min-height: 0;
     /* Sit at the bottom of the grid row, so the skills block ends where
-       the (formerly taller) bio box used to end. */
+       the (formerly taller) about me box used to end. */
     justify-content: flex-end;
   }
 
@@ -832,11 +833,11 @@ a {
     white-space: pre-wrap;
   }
 
-  /* ---------- HELVETICA NEUE LT PRO 55 ROMAN (name, occupation line, skills, bio) ----------
+  /* ---------- HELVETICA NEUE LT PRO 55 ROMAN (name, occupation line, skills, about me) ----------
      Sizes and tracking measured from the in-game reference (Example.png, 1280px wide):
      name cap height 19px, occupation 18px, skills 16px. Line heights are pinned to what the
      old Courier New layout used, so the header block keeps its exact height and nothing
-     below it (stats, parameters, skills, bio) moves. */
+     below it (stats, parameters, skills, about me) moves. */
   .codename {
     font-family: 'Helvetica Neue LT Pro 55', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-weight: normal;
@@ -890,12 +891,53 @@ a {
     --cc-text: #d8ffe9;
     --cc-dim: #7fd9a6;
     --cc-red: #ff4646;
+    --cc-hover: #0e2418;
+    --cc-active: #06190f;
+    --cc-place: #2f7a52;
+    --cc-glow: 70, 255, 150;
+    --cc-grid: 20, 90, 55;
+    --cc-vig-a: 4, 14, 9;
+    --cc-vig-b: 1, 4, 2;
     --ed-mono: 'Courier New', Courier, monospace;
     --ed-pw: 'Peace Walker', 'Courier New', Courier, monospace;
     --ed-scan: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 2px, transparent 2px 4px);
-    --ed-hazard-red: repeating-linear-gradient(-45deg, var(--cc-red) 0 8px, #050a07 8px 16px);
+    --ed-hazard-red: repeating-linear-gradient(-45deg, var(--cc-red) 0 8px, var(--cc-bg) 8px 16px);
     --ed-chamfer: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
   }
+
+
+  /* Alternate yellow palette for the editor UI: double-click the small square above the
+     "EDIT MEMBERSHIP CARD" title to switch between yellow (default) and green (class set on <html>). */
+  .ed-yellow .editor-dialog, .ed-yellow .editor-overlay,
+  .ed-yellow .hamburger-btn, .ed-yellow .download-btn, .ed-yellow .discord-btn, .ed-yellow .instagram-btn {
+    --cc-bg: #0a0803;
+    --cc-panel: #110e05;
+    --cc-panel-hi: #1b1709;
+    --cc-field: #060502;
+    --cc-line: #5e4a12;
+    --cc-line-hi: #86691a;
+    --cc-green: #ffd83d;
+    --cc-green-hi: #ffe88a;
+    --cc-text: #fff4cc;
+    --cc-dim: #dcc272;
+    --cc-hover: #26200c;
+    --cc-active: #1c1708;
+    --cc-place: #7d6a28;
+    --cc-glow: 255, 216, 61;
+    --cc-grid: 94, 74, 18;
+    --cc-vig-a: 14, 11, 3;
+    --cc-vig-b: 5, 4, 1;
+  }
+  .editor-kicker {
+    font-family: var(--ed-pw);
+    font-size: 19px;
+    font-weight: normal;
+    letter-spacing: 0.1em;
+    color: var(--cc-green);
+    text-shadow: none;
+    white-space: pre;
+  }
+  .theme-square { user-select: none; -webkit-user-select: none; } /* secret switch: no pointer cursor or tooltip */
 
   /* ---------- Floating action buttons (top right) ---------- */
   .hamburger-btn, .download-btn, .discord-btn, .instagram-btn {
@@ -971,7 +1013,7 @@ a {
     inset: 0;
     background:
       var(--ed-scan),
-      radial-gradient(90% 90% at 70% 50%, rgba(4, 14, 9, 0.6), rgba(1, 4, 2, 0.88));
+      radial-gradient(90% 90% at 70% 50%, rgba(var(--cc-vig-a), 0.6), rgba(var(--cc-vig-b), 0.88));
     -webkit-backdrop-filter: blur(2px) grayscale(0.5);
     backdrop-filter: blur(2px) grayscale(0.5);
     z-index: 1001;
@@ -988,8 +1030,8 @@ a {
     box-sizing: border-box;
     /* Radar grid */
     background:
-      linear-gradient(90deg, rgba(20, 90, 55, 0.18) 2px, transparent 2px) 0 0 / 90px 100%,
-      linear-gradient(rgba(20, 90, 55, 0.18) 2px, transparent 2px) 0 0 / 100% 90px,
+      linear-gradient(90deg, rgba(var(--cc-grid), 0.18) 2px, transparent 2px) 0 0 / 90px 100%,
+      linear-gradient(rgba(var(--cc-grid), 0.18) 2px, transparent 2px) 0 0 / 100% 90px,
       var(--cc-panel);
     color: var(--cc-text);
     font-family: var(--ed-mono);
@@ -1022,7 +1064,7 @@ a {
     pointer-events: none;
     z-index: 4;
     background:
-      linear-gradient(180deg, transparent 0, rgba(70, 255, 150, 0.06) 50%, transparent 100%) 0 -30% / 100% 30% no-repeat,
+      linear-gradient(180deg, transparent 0, rgba(var(--cc-glow), 0.06) 50%, transparent 100%) 0 -30% / 100% 30% no-repeat,
       var(--ed-scan);
     animation: edSweep 7s linear infinite;
   }
@@ -1041,7 +1083,7 @@ a {
     padding: 20px 22px 24px 28px;
     /* Radar rings in the corner */
     background:
-      repeating-radial-gradient(circle at 100% 0, transparent 0 34px, rgba(20, 90, 55, 0.55) 34px 36px),
+      repeating-radial-gradient(circle at 100% 0, transparent 0 34px, rgba(var(--cc-grid), 0.55) 34px 36px),
       var(--cc-bg);
     border-bottom: 1px solid var(--cc-line);
   }
@@ -1066,17 +1108,7 @@ a {
     letter-spacing: 0.06em;
     line-height: 0.9;
     color: var(--cc-text);
-    text-shadow: 0 0 10px rgba(70, 255, 150, 0.45);
-  }
-  .editor-header h2::before {
-    content: '\25A0  Cosplayers In Boxes Membership ID Maker';
-    font-family: var(--ed-pw);
-    font-size: 19px;
-    font-weight: normal;
-    letter-spacing: 0.1em;
-    color: var(--cc-green);
-    text-shadow: none;
-    white-space: pre;
+    text-shadow: 0 0 10px rgba(var(--cc-glow), 0.45);
   }
   .editor-close {
     width: 38px;
@@ -1140,7 +1172,7 @@ a {
     letter-spacing: 0.06em;
     line-height: 1;
     color: var(--cc-text);
-    text-shadow: 0 0 8px rgba(70, 255, 150, 0.35);
+    text-shadow: 0 0 8px rgba(var(--cc-glow), 0.35);
   }
   .editor-section h3 .br { color: var(--cc-green); text-shadow: none; }
   .editor-section h3::after {
@@ -1203,7 +1235,7 @@ a {
     transition: border-color 0.12s ease, box-shadow 0.12s ease;
   }
   .editor-dialog input::placeholder,
-  .editor-dialog textarea::placeholder { color: #2f7a52; }
+  .editor-dialog textarea::placeholder { color: var(--cc-place); }
   .editor-dialog input[type="text"]:hover,
   .editor-dialog input[type="number"]:hover,
   .editor-dialog textarea:hover,
@@ -1214,7 +1246,7 @@ a {
   .editor-section select:focus {
     outline: none;
     border-color: var(--cc-green);
-    box-shadow: 0 0 0 1px var(--cc-green), 0 0 14px rgba(70, 255, 150, 0.25);
+    box-shadow: 0 0 0 1px var(--cc-green), 0 0 14px rgba(var(--cc-glow), 0.25);
   }
   .editor-dialog input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   .editor-dialog input[type="number"]::-webkit-outer-spin-button,
@@ -1316,8 +1348,8 @@ a {
     opacity: 0.6;
   }
   .pixel-mode-toggle input[type="checkbox"]:checked {
-    background: #06190f;
-    box-shadow: inset 0 0 0 1px var(--cc-green), 0 0 12px rgba(70, 255, 150, 0.25);
+    background: var(--cc-active);
+    box-shadow: inset 0 0 0 1px var(--cc-green), 0 0 12px rgba(var(--cc-glow), 0.25);
   }
   .pixel-mode-toggle input[type="checkbox"]:checked::after {
     transform: translateX(28px);
@@ -1355,7 +1387,7 @@ a {
     border-radius: 0;
     transition: border-color 0.12s ease, background 0.12s ease;
   }
-  .param-edit-row:hover { border-color: var(--cc-line-hi); border-left-color: var(--cc-green); background: #0e2418; }
+  .param-edit-row:hover { border-color: var(--cc-line-hi); border-left-color: var(--cc-green); background: var(--cc-hover); }
   .param-edit-row > span:only-child { grid-column: 1 / -1; }          /* "Empty fixed slot" notice */
   .param-edit-row .param-name { grid-area: name; min-width: 0; min-height: 26px; }
   .editor-dialog .param-edit-row input[type="text"] {
@@ -1385,7 +1417,7 @@ a {
     font-family: var(--ed-pw);
     font-size: 36px;
     color: var(--cc-green);
-    text-shadow: 0 0 8px rgba(70, 255, 150, 0.4);
+    text-shadow: 0 0 8px rgba(var(--cc-glow), 0.4);
   }
   .param-edit-row .grade-preview-img { display: block; width: 24px; height: auto; }
   .param-edit-row .param-name-lbl {
@@ -1464,12 +1496,12 @@ a {
     font-family: var(--ed-mono);
     transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
   }
-  .overlay-option:hover { border-color: var(--cc-line-hi); background: #0e2418; }
+  .overlay-option:hover { border-color: var(--cc-line-hi); background: var(--cc-hover); }
   .overlay-option:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--cc-green); }
   .overlay-option.selected {
     border-color: var(--cc-green);
-    background: #0e2418;
-    box-shadow: 0 0 0 1px var(--cc-green), 0 0 14px rgba(70, 255, 150, 0.25);
+    background: var(--cc-hover);
+    box-shadow: 0 0 0 1px var(--cc-green), 0 0 14px rgba(var(--cc-glow), 0.25);
   }
   .overlay-thumb {
     position: relative;
@@ -1580,7 +1612,7 @@ a {
     color: var(--cc-green);
     font-family: var(--ed-mono);
     font-size: 20px;
-    box-shadow: 0 0 12px rgba(70, 255, 150, 0.22);
+    box-shadow: 0 0 12px rgba(var(--cc-glow), 0.22);
   }
 
   @media (max-width: 540px) {
@@ -1591,7 +1623,7 @@ a {
     .editor-dialog { width: 100vw; }
     .editor-body { padding-left: 24px; padding-right: 18px; }
     .editor-header h2 { font-size: 40px; }
-    .editor-header h2::before { font-size: 16px; letter-spacing: 0.06em; }
+    .editor-kicker { font-size: 16px; letter-spacing: 0.06em; }
   }
   @media (prefers-reduced-motion: reduce) {
     .editor-dialog, .editor-overlay { animation: none; }
@@ -1628,7 +1660,7 @@ a {
   .skill-name-text.export-hide-text::before {
     content: none !important;
   }
-  /* Quote/bio box gets its own export-hide variant rather than
+  /* ABOUT ME box gets its own export-hide variant rather than
      .export-hide-text above: that one uses visibility:hidden, which
      would also hide the box's dark background - but the box itself
      (the frame/background) should stay visible in the export even
@@ -1743,7 +1775,7 @@ a {
 
 <div class="rotate-prompt">
   <div class="rotate-icon">📱</div>
-  <div class="rotate-text">Please rotate your device to landscape<br>to view and edit the Staff ID card.</div>
+  <div class="rotate-text">Please rotate your device to landscape in order<br>to view and edit your Cosplayers In Boxes Membership Card.</div>
 </div>
 
 <div id="app"></div>
@@ -2541,8 +2573,8 @@ const CODENAME_MAX = 40;
 // so the line always fits the header column and can't push the layout.
 const SUBTITLE_MAX_TOTAL = 58;
 const SKILL_NAME_MAX = 44;
-const QUOTE_MAX = 455; // quote/bio box
-const QUOTE_MAX_ROWS = 5; // quote/bio box holds at most this many rows of text
+const QUOTE_MAX = 455; // ABOUT ME box
+const QUOTE_MAX_ROWS = 5; // ABOUT ME box holds at most this many rows of text
 const DEFAULT_CLASS = 'Occupation';
 const DEFAULT_ROLE = 'Role';
 const DEFAULT_PRONOUNS = 'Pronouns';
@@ -3074,7 +3106,7 @@ function numberInput(state, min, max) {
   return el;
 }
 
-// The QUOTE/BIO field in the dialog, built the same way as
+// The ABOUT ME field in the dialog, built the same way as
 // numberInput() above: a plain, uncontrolled textarea whose own typing
 // is untouched, plus a derive that pulls in changes made elsewhere
 // (e.g. directly on the card's quote box) whenever this field isn't
@@ -3322,7 +3354,7 @@ document.addEventListener('mousedown', e => {
   openPresetDropdown.val = null;
 });
 
-// Multi-line editable field (quote/bio): Enter is allowed to insert a
+// Multi-line editable field (ABOUT ME): Enter is allowed to insert a
 // real line break, matching the textarea in the sidebar dialog.
 function editableMultiline(tagFn, state, opts = {}) {
   const { extraClass = '', defaultValue = null, maxLen = 0, maxRows = 0 } = opts;
@@ -3807,7 +3839,7 @@ function openCropper(dataUrl, mimeType, onDone, onCancel) {
     dialog.className = 'crop-dialog';
     const title = document.createElement('div');
     title.className = 'crop-title';
-    title.textContent = 'Crop Profile Image (1:1)';
+    title.textContent = 'Crop Profile Image For Membership Card';
     const hint = document.createElement('div');
     hint.className = 'crop-hint';
     hint.textContent = 'Drag the box to move it. Drag a corner to resize.';
@@ -4079,12 +4111,26 @@ function khakiToggle() {
   );
 }
 
+// Editor color theme: yellow by default, with a hidden switch to green. Double-clicking the small
+// square above the dialog title toggles it; the choice is remembered between visits when storage
+// is available. (Uses its own key so an earlier green default saved by a previous version is ignored.)
+const editorYellow = van.state((() => { try { return localStorage.getItem('cib-editor-theme') !== 'green'; } catch (e) { return true; } })());
+van.derive(() => {
+  const on = editorYellow.val;
+  document.documentElement.classList.toggle('ed-yellow', on);
+  try { localStorage.setItem('cib-editor-theme', on ? 'yellow' : 'green'); } catch (e) {}
+});
+
 function Dialog() {
   const dzContainer = div({ id: 'profile-dropzone', class: 'dropzone' });
 
   const dialogEl = div({ class: 'editor-dialog' },
     div({ class: 'editor-header' },
-      h2({}, 'EDIT MEMBERSHIP CARD'),
+      h2({},
+        div({ class: 'editor-kicker' },
+          span({ class: 'theme-square', ondblclick: () => { editorYellow.val = !editorYellow.val; } }, '\u25A0'),
+          '  Cosplayers In Boxes Membership ID Maker'),
+        'EDIT MEMBERSHIP CARD'),
       button({ class: 'editor-close', onclick: () => { dialogOpen.val = false; } }, '\u2715'),
     ),
     div({ class: 'editor-body' },
@@ -4134,7 +4180,7 @@ function Dialog() {
       ),
 
       div({ class: 'editor-section' },
-        h3({}, span({ class: 'br' }, '<'), 'QUOTE / BIO', span({ class: 'br' }, '>')),
+        h3({}, span({ class: 'br' }, '<'), 'ABOUT ME', span({ class: 'br' }, '>')),
         div({ class: 'field' }, quoteTextarea(quote)),
       ),
 
@@ -4195,7 +4241,7 @@ function markUntouchedSkillsForExport(hide) {
   });
 }
 
-// Same idea as markUntouchedSkillsForExport, for the quote/bio
+// Same idea as markUntouchedSkillsForExport, for the ABOUT ME
 // description box: its placeholder/default text is hidden in the
 // exported PNG whenever it's blank or still exactly the seeded
 // default text, but the box itself (dark background/frame) stays
