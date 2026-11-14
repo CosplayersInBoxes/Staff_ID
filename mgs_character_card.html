@@ -2972,7 +2972,7 @@ function StatBar(labelText, valueState) {
       // Shown number drops with the illness debuff; editing still changes the base.
       const ill = illnessPercent();
       return ill === null ? v : Math.ceil(v * ill / 100);
-    })),
+    }, true)),
   );
   makeBarDraggable(el, 'horizontal', frac => { valueState.val = clamp(Math.round(frac * 9999), 0, 9999); });
   return el;
@@ -4263,8 +4263,8 @@ function Dialog() {
             ),
             // Stats sit right under Occupation / Role / Pronouns, as boxes sized to their longest value.
             div({ class: 'stats-edit-row' },
-              Field('Life', numberInput(life, 0, 9999)),
-              Field('Psyche', numberInput(psyche, 0, 9999)),
+              Field('Life', numberInput(life, 0, 9999, true)),
+              Field('Psyche', numberInput(psyche, 0, 9999, true)),
               Field('GMP+', numberInput(gmp, 0, 999999, true)),
             ),
             label({ class: 'pixel-mode-toggle' },
