@@ -177,13 +177,13 @@ a {
     letter-spacing: 1px;
   }
 
-  /* Alternate card overlay (picked in the editor's OVERLAY section).
+  /* Alternate card watermark (picked in the editor's WATERMARK section).
      The default MSF_WATERMARK.png comes from the .card rule above. */
-  .card.overlay-cib2026 {
+  .card.watermark-cib2026 {
     background-image: url('COSPLAYERS_IN_BOXES.png');
   }
 
-  .card.overlay-temp {
+  .card.watermark-temp {
     background-image: url('OUTER_HEAVEN.png');
     background-size: contain;
     background-position: right center;
@@ -1629,9 +1629,9 @@ a {
   }
   .skill-edit-row input[type="text"]:last-child { flex: 1; min-width: 0; }
 
-  /* ---------- Overlay picker ---------- */
-  .overlay-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-  .overlay-option {
+  /* ---------- Watermark picker ---------- */
+  .watermark-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .watermark-option {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -1648,14 +1648,14 @@ a {
     overflow: hidden;
     transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
   }
-  .overlay-option:hover { border-color: var(--cc-line-hi); background: var(--cc-hover); }
-  .overlay-option:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--cc-green); }
-  .overlay-option.selected {
+  .watermark-option:hover { border-color: var(--cc-line-hi); background: var(--cc-hover); }
+  .watermark-option:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--cc-green); }
+  .watermark-option.selected {
     border-color: var(--cc-green);
     background: var(--cc-hover);
     box-shadow: 0 0 0 1px var(--cc-green), 0 0 14px rgba(var(--cc-glow), 0.25);
   }
-  .overlay-thumb {
+  .watermark-thumb {
     position: relative;
     width: 100%;
     aspect-ratio: 3.5 / 2;
@@ -1664,16 +1664,16 @@ a {
     border: 1px solid var(--cc-line);
     pointer-events: none;
   }
-  .overlay-thumb .card { position: absolute; inset: 0; }
-  .overlay-name {
+  .watermark-thumb .card { position: absolute; inset: 0; }
+  .watermark-name {
     font-size: 12px;
     line-height: 1.3;
     color: var(--cc-dim);
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  .overlay-option.selected .overlay-name { color: var(--cc-green); }
-  .overlay-option.selected .overlay-name::before { content: '\2713  '; }
+  .watermark-option.selected .watermark-name { color: var(--cc-green); }
+  .watermark-option.selected .watermark-name::before { content: '\2713  '; }
 
   /* ---------- Buttons ---------- */
   .add-param-btn {
@@ -1848,9 +1848,9 @@ a {
     .param-edit-row .grade-preview-img { width: 20px; }
     .param-edit-row .remove-param { width: 26px; height: 26px; }
 
-    /* Overlay choices */
-    .overlay-picker { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
-    .overlay-option { padding: 4px 4px 6px; gap: 4px; }
+    /* Watermark choices */
+    .watermark-picker { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+    .watermark-option { padding: 4px 4px 6px; gap: 4px; }
 
     /* Buttons + danger zone */
     .add-param-btn { margin-top: 6px; padding: 9px 10px 7px; font-size: 22px; }
@@ -1864,7 +1864,7 @@ a {
   }
 
   /* Wide enough for two columns: IDENTITY | ABOUT ME on top, PARAMETERS AND SKILLS across the
-     full width, then OVERLAY | GAME OVER, with CREDITS below. */
+     full width, then WATERMARK | GAME OVER, with CREDITS below. */
   @media (min-width: 640px) and ((max-width: 950px), (hover: none) and (pointer: coarse)) {
     .editor-body {
       display: grid;
@@ -1876,7 +1876,7 @@ a {
     .editor-body > .editor-section:nth-child(1) { order: 1; }                         /* identity */
     .editor-body > .editor-section:nth-child(3) { order: 2; }                         /* about me */
     .editor-body > .editor-section:nth-child(2) { order: 3; grid-column: 1 / -1; }    /* parameters + skills */
-    .editor-body > .editor-section:nth-child(4) { order: 4; }                         /* overlay */
+    .editor-body > .editor-section:nth-child(4) { order: 4; }                         /* watermark */
     .editor-body > .editor-section:nth-child(5) { order: 5; }                         /* game over */
     .editor-body > .editor-section:nth-child(6) { order: 6; grid-column: 1 / -1; }    /* credits */
     .editor-body > .editor-section:nth-child(3) textarea { min-height: 150px; }
@@ -2985,15 +2985,15 @@ const portraitHasTransparency = van.state(false);
 // applyHalftoneEffect() instead. See the PORTRAIT editor section.
 const halftoneEnabled = van.state(false);
 
-// Which background overlay the card uses. 'default' is MSF_WATERMARK.png;
-// the others are defined in OVERLAY_CHOICES (their CSS lives in the
-// .card.overlay-<id> rules).
-const OVERLAY_CHOICES = [
+// Which background watermark the card uses. 'default' is MSF_WATERMARK.png;
+// the others are defined in WATERMARK_CHOICES (their CSS lives in the
+// .card.watermark-<id> rules).
+const WATERMARK_CHOICES = [
   { id: 'default', label: 'MSF LOGO' },
   { id: 'cib2026', label: 'COSPLAYERS IN BOXES' },
   { id: 'temp', label: 'OUTER HEAVEN' },
 ];
-const overlayChoice = van.state('default');
+const watermarkChoice = van.state('default');
 
 // Whether the card's khaki paper colour is shown. Turn off for printing on coloured card stock
 // (the exported PNG is transparent where the khaki was).
@@ -3028,7 +3028,7 @@ function collectSerializable() {
     gmp: gmp.val,
     profileImg: profileImg.val,
     halftoneEnabled: halftoneEnabled.val,
-    overlay: overlayChoice.val,
+    watermark: watermarkChoice.val,
     khakiEnabled: khakiEnabled.val,
     quote: quote.val,
     ticker: ticker.val,
@@ -3075,7 +3075,8 @@ function loadSavedState() {
   if (typeof data.psyche === 'number') psyche.val = clamp(Math.round(data.psyche), 0, 9999);
   if (typeof data.gmp === 'number') gmp.val = clamp(Math.round(data.gmp), 0, 999999);
   if (typeof data.halftoneEnabled === 'boolean') halftoneEnabled.val = data.halftoneEnabled;
-  if (typeof data.overlay === 'string' && OVERLAY_CHOICES.some(o => o.id === data.overlay)) overlayChoice.val = data.overlay;
+  const wmSaved = typeof data.watermark === 'string' ? data.watermark : data.overlay; // data.overlay = older saves
+  if (typeof wmSaved === 'string' && WATERMARK_CHOICES.some(o => o.id === wmSaved)) watermarkChoice.val = wmSaved;
   if (typeof data.khakiEnabled === 'boolean') khakiEnabled.val = data.khakiEnabled;
   if (typeof data.profileImg === 'string') setProfileImage(data.profileImg);
   if (typeof data.quote === 'string') quote.val = data.quote.slice(0, QUOTE_MAX);
@@ -3314,7 +3315,7 @@ function TickerTape() {
 }
 
 function Card() {
-  return div({ class: () => 'paper' + (khakiEnabled.val ? '' : ' no-khaki') }, div({ class: () => 'card' + (sicknesses.some(x => (Number(x.val) || 0) > 0) ? ' ill' : '') + (overlayChoice.val !== 'default' ? ` overlay-${overlayChoice.val}` : '') },
+  return div({ class: () => 'paper' + (khakiEnabled.val ? '' : ' no-khaki') }, div({ class: () => 'card' + (sicknesses.some(x => (Number(x.val) || 0) > 0) ? ' ill' : '') + (watermarkChoice.val !== 'default' ? ` watermark-${watermarkChoice.val}` : '') },
     div({ class: 'grid' },
 
       div({ class: 'portrait-col' },
@@ -4369,7 +4370,7 @@ function resetCard() {
 
   clearProfileImage();
   halftoneEnabled.val = false;
-  overlayChoice.val = 'default';
+  watermarkChoice.val = 'default';
   khakiEnabled.val = true;
   if (dropzoneInstance) {
     try { dropzoneInstance.removeAllFiles(true); } catch (err) { /* no files to remove */ }
@@ -4410,23 +4411,23 @@ function halftoneCheckbox() {
   return el;
 }
 
-// Visual picker for the card overlay image (see OVERLAY_CHOICES): one clickable thumbnail per
-// overlay. Each thumbnail is a mini .card with the same overlay class the real card uses, so it
+// Visual picker for the card watermark image (see WATERMARK_CHOICES): one clickable thumbnail per
+// watermark. Each thumbnail is a mini .card with the same watermark class the real card uses, so it
 // shows exactly the artwork that will be applied.
-function overlaySelect() {
-  return div({ class: 'overlay-picker', role: 'radiogroup', 'aria-label': 'Card overlay' },
-    ...OVERLAY_CHOICES.map(o => button({
+function watermarkSelect() {
+  return div({ class: 'watermark-picker', role: 'radiogroup', 'aria-label': 'Card watermark' },
+    ...WATERMARK_CHOICES.map(o => button({
       type: 'button',
-      class: () => 'overlay-option' + (overlayChoice.val === o.id ? ' selected' : ''),
+      class: () => 'watermark-option' + (watermarkChoice.val === o.id ? ' selected' : ''),
       role: 'radio',
-      'aria-checked': () => String(overlayChoice.val === o.id),
+      'aria-checked': () => String(watermarkChoice.val === o.id),
       title: o.label,
-      onclick: () => { overlayChoice.val = o.id; },
+      onclick: () => { watermarkChoice.val = o.id; },
     },
-      div({ class: 'overlay-thumb' },
-        div({ class: 'card' + (o.id !== 'default' ? ` overlay-${o.id}` : '') }),
+      div({ class: 'watermark-thumb' },
+        div({ class: 'card' + (o.id !== 'default' ? ` watermark-${o.id}` : '') }),
       ),
-      span({ class: 'overlay-name' }, o.label),
+      span({ class: 'watermark-name' }, o.label),
     )),
   );
 }
@@ -4528,9 +4529,9 @@ function Dialog() {
       ),
 
       div({ class: 'editor-section' },
-        h3({}, span({ class: 'br' }, '<'), 'OVERLAY', span({ class: 'br' }, '>')),
+        h3({}, span({ class: 'br' }, '<'), 'WATERMARK', span({ class: 'br' }, '>')),
         div({ class: 'current-photo-hint' }, 'Background artwork behind the card.'),
-        overlaySelect(),
+        watermarkSelect(),
         khakiToggle(),
       ),
 
