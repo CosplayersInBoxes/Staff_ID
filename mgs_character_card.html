@@ -894,8 +894,8 @@ a {
   /* ================= EDITOR UI ================= */
 
   /* Palette green on near-black. */
-  .editor-dialog, .editor-overlay,
-  .hamburger-btn, .download-btn, .discord-btn, .instagram-btn, .linktree-btn {
+  .editor-dialog, .editor-overlay, .tut-layer,
+  .hamburger-btn, .download-btn, .discord-btn, .instagram-btn, .linktree-btn, .tutorial-btn {
     --cc-bg: #050a07;
     --cc-panel: #07110c;
     --cc-panel-hi: #0b1b13;
@@ -924,8 +924,8 @@ a {
 
   /* Alternate yellow palette for the editor UI: double-click the small square above the
      "EDIT MEMBERSHIP CARD" title to switch between yellow (default) and green (class set on <html>). */
-  .ed-yellow .editor-dialog, .ed-yellow .editor-overlay,
-  .ed-yellow .hamburger-btn, .ed-yellow .download-btn, .ed-yellow .discord-btn, .ed-yellow .instagram-btn, .ed-yellow .linktree-btn {
+  .ed-yellow .editor-dialog, .ed-yellow .editor-overlay, .ed-yellow .tut-layer,
+  .ed-yellow .hamburger-btn, .ed-yellow .download-btn, .ed-yellow .discord-btn, .ed-yellow .instagram-btn, .ed-yellow .linktree-btn, .ed-yellow .tutorial-btn {
     --cc-bg: #0a0803;
     --cc-panel: #110e05;
     --cc-panel-hi: #1b1709;
@@ -956,7 +956,7 @@ a {
   .theme-square { user-select: none; -webkit-user-select: none; } /* secret switch: no pointer cursor or tooltip */
 
   /* ---------- Floating action buttons (top right) ---------- */
-  .hamburger-btn, .download-btn, .discord-btn, .instagram-btn, .linktree-btn {
+  .hamburger-btn, .download-btn, .discord-btn, .instagram-btn, .linktree-btn, .tutorial-btn {
     position: fixed;
     top: 24px;
     z-index: 1000;
@@ -982,13 +982,14 @@ a {
   .discord-btn   { right: 152px; }
   .instagram-btn { right: 216px; }
   .linktree-btn  { right: 280px; }
-  .hamburger-btn:hover, .download-btn:hover, .discord-btn:hover, .instagram-btn:hover, .linktree-btn:hover {
+  .tutorial-btn  { right: 344px; font-size: 1.6em; font-weight: bold; line-height: 1; }
+  .hamburger-btn:hover, .download-btn:hover, .discord-btn:hover, .instagram-btn:hover, .linktree-btn:hover, .tutorial-btn:hover {
     color: var(--cc-green);
     background: var(--cc-panel-hi);
     box-shadow: inset 0 0 0 1px var(--cc-green), inset 0 -3px 0 var(--cc-green);
   }
   .hamburger-btn:focus-visible, .download-btn:focus-visible,
-  .discord-btn:focus-visible, .instagram-btn:focus-visible, .linktree-btn:focus-visible,
+  .discord-btn:focus-visible, .instagram-btn:focus-visible, .linktree-btn:focus-visible, .tutorial-btn:focus-visible,
   .editor-close:focus-visible, .add-param-btn:focus-visible, .reset-card-btn:focus-visible {
     outline: 2px solid var(--cc-green);
     outline-offset: 2px;
@@ -1017,7 +1018,7 @@ a {
   /* Phones / small windows: stack the icon buttons down the right edge instead of across the top.
      applyMobileScale() reserves this strip so the card is fitted beside it, never underneath. */
   @media (max-width: 950px) {
-    .hamburger-btn, .download-btn, .discord-btn, .instagram-btn, .linktree-btn {
+    .hamburger-btn, .download-btn, .discord-btn, .instagram-btn, .linktree-btn, .tutorial-btn {
       width: 44px;
       height: 44px;
       right: calc(8px + env(safe-area-inset-right, 0px));
@@ -1027,11 +1028,130 @@ a {
     .discord-btn   { top: 112px; }
     .instagram-btn { top: 164px; }
     .linktree-btn  { top: 216px; }
+    .tutorial-btn  { top: 268px; font-size: 1.35em; }
     .hamburger-btn span:nth-child(1), .hamburger-btn span:nth-child(3) { width: 20px; }
     .hamburger-btn span:nth-child(2) { width: 14px; margin-right: 12px; }
     .hamburger-btn:hover span:nth-child(2) { width: 20px; }
     .discord-btn svg, .instagram-btn svg { width: 22px; height: 22px; }
     .linktree-icon { width: 22px; height: 22px; }
+  }
+
+  /* ---------- Tutorial: slide-show walkthrough that overlays the tool ---------- */
+  .tut-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 2000; /* above the editor (1001/1002) and the corner buttons (1000), below the rotate prompt (3000) */
+    font-family: var(--ed-mono);
+    color: var(--cc-text);
+  }
+  /* Transparent click-catcher so nothing underneath can be edited mid-tour. */
+  .tut-block { position: absolute; inset: 0; cursor: default; }
+  /* The highlight: a glowing box around the feature, with a huge shadow that dims everything else. */
+  .tut-spot {
+    position: absolute;
+    box-sizing: border-box;
+    pointer-events: none;
+    border: 2px solid var(--cc-green);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.78), 0 0 18px 2px rgba(var(--cc-glow), 0.65), inset 0 0 12px rgba(var(--cc-glow), 0.35);
+    transition: left 0.35s ease, top 0.35s ease, width 0.35s ease, height 0.35s ease, border-color 0.2s ease;
+    animation: tutPulse 1.6s ease-in-out infinite;
+  }
+  .tut-spot.none { border-color: transparent; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.78); animation: none; }
+  @keyframes tutPulse {
+    50% { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.78), 0 0 30px 6px rgba(var(--cc-glow), 0.85), inset 0 0 16px rgba(var(--cc-glow), 0.5); }
+  }
+  /* The arrow that points at the feature (rotated by script; the svg bobs along its own axis). */
+  .tut-arrow {
+    position: absolute;
+    width: 48px;
+    height: 28px;
+    margin: -14px 0 0 -24px;
+    pointer-events: none;
+    color: var(--cc-green);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .tut-arrow svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 6px rgba(var(--cc-glow), 0.85));
+    animation: tutBob 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes tutBob { from { transform: translateX(-4px); } to { transform: translateX(6px); } }
+
+  .tut-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    box-sizing: border-box;
+    width: min(360px, calc(100vw - 24px));
+    padding: 14px 16px 12px;
+    background: var(--ed-scan), var(--cc-panel);
+    clip-path: var(--ed-chamfer);
+    box-shadow: inset 0 0 0 1px var(--cc-line-hi), inset 0 -3px 0 var(--cc-green);
+  }
+  .tut-card.in { animation: tutCardIn 0.25s ease both; }
+  @keyframes tutCardIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .tut-step {
+    font-family: var(--ed-pw);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    color: var(--cc-dim);
+  }
+  .tut-title {
+    margin: 2px 0 6px;
+    font-family: var(--ed-pw);
+    font-size: 24px;
+    letter-spacing: 0.08em;
+    line-height: 1.1;
+    color: var(--cc-green);
+  }
+  .tut-text { font-size: 14px; line-height: 1.45; color: var(--cc-text); }
+  .tut-progress { height: 3px; margin-top: 12px; background: var(--cc-field); box-shadow: inset 0 0 0 1px var(--cc-line); }
+  .tut-progress span { display: block; height: 100%; background: var(--cc-green); transition: width 0.3s ease; }
+  .tut-nav { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .tut-skip {
+    margin-right: auto;
+    padding: 6px 2px;
+    background: none;
+    border: 0;
+    color: var(--cc-dim);
+    font-family: var(--ed-pw);
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+  }
+  .tut-skip:hover { color: var(--cc-green); }
+  .tut-btn {
+    padding: 7px 12px;
+    background: var(--cc-field);
+    border: 0;
+    color: var(--cc-text);
+    font-family: var(--ed-pw);
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px));
+    box-shadow: inset 0 0 0 1px var(--cc-line), inset 0 -2px 0 var(--cc-line);
+  }
+  .tut-btn:hover { color: var(--cc-green); box-shadow: inset 0 0 0 1px var(--cc-green), inset 0 -2px 0 var(--cc-green); }
+  .tut-btn.tut-primary { background: var(--cc-green); color: var(--cc-field); box-shadow: none; }
+  .tut-btn.tut-primary:hover { background: var(--cc-green-hi); color: var(--cc-field); }
+  .tut-btn:focus-visible, .tut-skip:focus-visible { outline: 2px solid var(--cc-green); outline-offset: 2px; }
+  .tut-btn[hidden] { visibility: hidden; display: block; }
+
+  /* Phones / short windows: tighter card. */
+  @media (max-width: 540px), (max-height: 520px) {
+    .tut-card { width: min(320px, calc(100vw - 24px)); padding: 10px 12px 9px; }
+    .tut-title { font-size: 19px; margin-bottom: 4px; }
+    .tut-text { font-size: 12.5px; line-height: 1.35; }
+    .tut-progress, .tut-nav { margin-top: 8px; }
+    .tut-btn { padding: 6px 10px; font-size: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tut-spot, .tut-arrow svg, .tut-card.in { animation: none; }
+    .tut-spot { transition: none; }
   }
 
   /* ---------- Overlay + panel ---------- */
@@ -4605,6 +4725,279 @@ function LinktreeButton() {
   return link;
 }
 
+// ---------- TUTORIAL----------
+// The "?" button (top right) starts a step-by-step tour. Each step dims the screen, draws a glowing
+// box around one feature, and points an animated arrow at it from a small instruction card.
+// Steps marked `editor: true` open the editor panel first (and close it again afterwards).
+// `sel` is a CSS selector for the feature to highlight; steps without one are centred title slides.
+const TUTORIAL_STEPS = [
+  { title: 'WELCOME TO COSPLAYERS IN BOXES',
+    text: 'Cosplayers In Boxes offers their members a way to make their own Membership Cards! This quick tour of the app shows you how to use the tool and what every part means and does. Use the buttons or your \u2190 \u2192 keys to move around, and Esc to leave at any time.' },
+  { title: 'PORTRAIT', sel: '.portrait',
+    text: 'Click the portrait box to add your photo, or drag an image straight onto it. You can crop it once it loads. Click it again any time to swap the photo. Adding the effect as seen in Peace Walker is optional and can be toggled on or off at any time from the edit menu' },
+  { title: 'CODENAME', sel: '.codename',
+    text: 'Click here to enter your codename. This is how you identify yourself online. Please exclude pronouns from your codename. There will be a place to put them later in the card' },
+  { title: 'OCCUPATION', els: () => [document.querySelectorAll('.subtitle .class-field-wrap')[0]],
+    text: 'Under your codename put what you do for a living or what you are studying. We do this to allow you to express your professional or academic identity and network with other members inside the group. We support each other in here. Click the text box to type in your employment or education status, or pick one from the preset list. You are not obligated to share this information. But it is strongly encouraged.' },
+  { title: 'ROLE', els: () => [document.querySelectorAll('.subtitle .class-field-wrap')[1]],
+    text: 'Next is your role. Click it to type your cosplay character you are known by, or pick one from the preset list. Ideally, this should be a Metal Gear character but do not feel limited by that if you do not want to do so.' },
+  { title: 'PRONOUNS', els: () => [document.querySelectorAll('.subtitle .class-field-wrap')[2]],
+    text: 'The last field. Click it to type your pronouns, or pick one from the preset list.' },
+  { title: 'LIFE & PSYCHE', sel: '.stat-bars',
+    text: 'This section reflects your health and mental fortitude. Drag across a bar to set how full it is, or click the number and type an exact value (up to 9999).' },
+  { title: 'GMP CONTRIBUTION', sel: '.gmp-box',
+    text: 'Click the number to type your GMP value, or drag left and right on the box to change it quickly. This is a fun way to show how much you contribute to the group.' },
+  { title: 'COMBAT \u2013 INTEL', els: () => [...document.querySelectorAll('.params-row .param-cell:not(.morale)')].slice(0, 5),
+    text: 'The first five parameters: Combat, R&D, Mess Hall, Medical and Intel are the core parameters. Drag up or down inside a column to set its level, and its letter grade updates for you. Have each value set to reflect your real life abilities in that field.' },
+  { title: 'OTHER PARAMETERS', els: () => [...document.querySelectorAll('.params-row .param-cell:not(.morale)')].slice(5),
+    text: 'The rest of the parameter columns work the same way: drag up or down to set the level. You can learn what each icon represents by hovering your mouse over them or view them all in the editor.' },
+  { title: 'MORALE', sel: '.params-row .param-cell.morale',
+    text: 'Morale is the orange column. It reflects your overall mood and motivation. Drag it to set the level. It functions as a multiplier for your other parameters. Above 50% it boosts your other parameters, unless a sickness is active.' },
+  { title: 'SICKNESSES', sel: '.sick-panel',
+    text: 'Just like with real life, sometimes we are not always at full strength. A sickness can affect your performance in our day to day activities and it is reflected in the parameters. Drag a column upward to give a sickness a value. Sick, Wounded and PTSD weaken your LIFE, PSYCHE and parameters (Hostility on its own does not). Active ones show their icon. Drag back to zero to clear a sickness.' },
+  { title: 'SKILLS', sel: '.skills-list',
+    text: 'As Cosplayers, we often have unique abilities and talents. Your membership card allows you to showcase these skills. Click a skill box to rename it. Click the little icon beside it to pick a different picture (when Peace Walker icons are on). Leave a name blank and its icon disappears. Just like with Occupation,Role and Pronouns, Skills have a drop down menu with preset answers. You do not have to use the preset answers.' },
+  { title: 'ABOUT ME', sel: '.quote-box',
+    text: 'Click the box and write a short bio to tell others about yourself. This card can be shared with others or even printed out and carried with you. So make sure it reflects who you are! You can always edit it later. This application SHOULD remember your text (Bugs Can Still happen). It holds up to 5 rows of text so it always fits.' },
+  { title: 'EDIT MENU', sel: '.hamburger-btn',
+    text: 'This button opens the full editor. Everything on the card can be changed there too, laid out as simple forms. Press NEXT and we will open it.' },
+  { title: 'IDENTITY', editor: true, sel: '.editor-body > .editor-section:nth-child(1)',
+    text: 'Photo, codename, Occupation / Role / Pronouns, and the LIFE, PSYCHE and GMP numbers. The halftone switch gives your photo a black and white dot-screen print look like they have in Peace Walker. This feature is disabled by default and is optional.' },
+  { title: 'PARAMETERS AND SKILLS', editor: true, sel: '.editor-body > .editor-section:nth-child(2)',
+    text: 'Just like you can interact with the card to set each parameter\u2019s level, set sickness values, and add skills; you can also make edits in the editor.  The top switch swaps between Peace Walker icons and emojis. If you want to customize the emojis and therefol what they represent. You can do so here. I might look strange when showing to others in the group as what it is set up as now is seen as the default.' },
+  { title: 'ABOUT ME', editor: true, sel: '.editor-body > .editor-section:nth-child(3)',
+    text: 'Allow you to write your bio here instead of on the card. It is capped at 5 rows so it always fits the Bio Box.' },
+  { title: 'CARD WATERMARK', editor: true, sel: '.editor-body > .editor-section:nth-child(4)',
+    text: 'Choose the background artwork behind the card. The khaki switch turns the paper colour off, which is handy when printing on coloured card stock.' },
+  { title: 'SNAKE? SNAKE? SNAAAAAAAAAAKE!', editor: true, sel: '.editor-body > .editor-section:nth-child(5)',
+    text: 'Reset Card puts every field back to the default template. This cannot be undone, so use it only when necessary or if an update for the tool is available and the reset is recommended by Major Tommy.' },
+  { title: 'DOWNLOAD', sel: '.download-btn',
+    text: 'If you are happy with your card and want to share it with others; Press this button to save it as a PNG image.' },
+  { title: 'VR MISSION COMPLETED', text: 'That is all you need to know about the tool. You are ready to go out into the field as proud member of Cosplayers In Boxes! Press the ? button at the top any time to run this tutorial again.' },
+];
+
+let tutLayer = null;
+let tutEls = null;
+let tutIndex = 0;
+let tutTimers = [];
+
+function tutCompactEditor() {
+  // Same breakpoint the CSS uses to turn the editor into a full-screen panel.
+  return window.matchMedia('(max-width: 950px), (hover: none) and (pointer: coarse)').matches;
+}
+
+function tutLater(fn, ms) { tutTimers.push(setTimeout(fn, ms)); }
+
+function tutBuild() {
+  const mk = (tag, cls, txt) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt != null) e.textContent = txt;
+    return e;
+  };
+  const layer = mk('div', 'tut-layer');
+  layer.setAttribute('role', 'dialog');
+  layer.setAttribute('aria-label', 'Tutorial');
+  const block = mk('div', 'tut-block');
+  const spot = mk('div', 'tut-spot none');
+  const arrow = mk('div', 'tut-arrow');
+  arrow.innerHTML = '<svg viewBox="0 0 48 28" aria-hidden="true"><path d="M1 9H28V1L47 14L28 27V19H1Z" fill="currentColor" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+  const card = mk('div', 'tut-card');
+  const step = mk('div', 'tut-step');
+  const title = mk('div', 'tut-title');
+  const text = mk('div', 'tut-text');
+  const prog = mk('div', 'tut-progress');
+  const fill = mk('span');
+  prog.appendChild(fill);
+  const nav = mk('div', 'tut-nav');
+  const skip = mk('button', 'tut-skip', 'SKIP');
+  const back = mk('button', 'tut-btn', '\u2190 BACK');
+  const next = mk('button', 'tut-btn tut-primary', 'NEXT \u2192');
+  [skip, back, next].forEach(b => { b.type = 'button'; });
+  skip.onclick = () => tutClose();
+  back.onclick = () => tutShow(tutIndex - 1);
+  next.onclick = () => tutNext();
+  nav.append(skip, back, next);
+  card.append(step, title, text, prog, nav);
+  layer.append(block, spot, arrow, card);
+  return { layer, spot, arrow, card, step, title, text, fill, skip, back, next };
+}
+
+function tutOpen() {
+  if (tutLayer) return;
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  dialogOpen.val = false;
+  tutEls = tutBuild();
+  tutLayer = tutEls.layer;
+  document.body.appendChild(tutLayer);
+  document.addEventListener('keydown', tutKey, true);
+  window.addEventListener('resize', tutOnResize);
+  tutShow(0);
+}
+
+function tutClose() {
+  if (!tutLayer) return;
+  tutTimers.forEach(clearTimeout);
+  tutTimers = [];
+  document.removeEventListener('keydown', tutKey, true);
+  window.removeEventListener('resize', tutOnResize);
+  tutLayer.remove();
+  tutLayer = null;
+  tutEls = null;
+  dialogOpen.val = false;
+}
+
+function tutNext() {
+  if (tutIndex >= TUTORIAL_STEPS.length - 1) tutClose();
+  else tutShow(tutIndex + 1);
+}
+
+function tutKey(e) {
+  if (!tutLayer) return;
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); tutClose(); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); tutNext(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); if (tutIndex > 0) tutShow(tutIndex - 1); }
+}
+
+function tutOnResize() {
+  requestAnimationFrame(() => requestAnimationFrame(tutPosition));
+}
+
+function tutShow(i) {
+  if (!tutLayer) return;
+  tutTimers.forEach(clearTimeout);
+  tutTimers = [];
+  const n = TUTORIAL_STEPS.length;
+  tutIndex = clamp(i, 0, n - 1);
+  const st = TUTORIAL_STEPS[tutIndex];
+  const e = tutEls;
+  e.step.textContent = `STEP ${String(tutIndex + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`;
+  e.title.textContent = st.title;
+  e.text.textContent = st.text;
+  e.fill.style.width = `${((tutIndex + 1) / n) * 100}%`;
+  e.back.hidden = tutIndex === 0;
+  e.next.textContent = tutIndex === n - 1 ? 'FINISH' : 'NEXT \u2192';
+  e.skip.style.visibility = tutIndex === n - 1 ? 'hidden' : 'visible';
+  e.card.classList.remove('in');
+  void e.card.offsetWidth; // restart the fade-in animation
+  e.card.classList.add('in');
+  e.arrow.style.opacity = '0';
+
+  const wantEditor = !!st.editor;
+  if (dialogOpen.val !== wantEditor) {
+    dialogOpen.val = wantEditor;
+    tutLater(tutSettle, wantEditor ? 420 : 80); // let the editor finish sliding in / out
+  } else {
+    tutSettle();
+  }
+  e.next.focus({ preventScroll: true });
+}
+
+function tutSettle() {
+  if (!tutLayer) return;
+  const st = TUTORIAL_STEPS[tutIndex];
+  if (st.editor) {
+    // Scroll the editor so the section being explained starts at the top of the panel.
+    const body = document.querySelector('.editor-body');
+    const el = document.querySelector(st.sel);
+    if (body && el) body.scrollTop += el.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+  }
+  tutPosition();
+  tutLater(tutPosition, 120);
+  tutLater(() => { if (tutEls) { tutPosition(); tutEls.arrow.style.opacity = '1'; } }, 380);
+}
+
+// A step highlights either one element (`sel`) or the combined box of several (`els`).
+function tutTargetRect(st) {
+  const list = st.els ? st.els().filter(Boolean) : [document.querySelector(st.sel || '.tut-none')].filter(Boolean);
+  let r = null;
+  for (const el of list) {
+    const b = el.getBoundingClientRect();
+    if (b.width < 1 && b.height < 1) continue;
+    r = r ? { left: Math.min(r.left, b.left), top: Math.min(r.top, b.top), right: Math.max(r.right, b.right), bottom: Math.max(r.bottom, b.bottom) }
+          : { left: b.left, top: b.top, right: b.right, bottom: b.bottom };
+  }
+  if (r) { r.width = r.right - r.left; r.height = r.bottom - r.top; }
+  return r;
+}
+
+function tutPosition() {
+  if (!tutLayer) return;
+  const { spot, arrow, card } = tutEls;
+  const st = TUTORIAL_STEPS[tutIndex];
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const cw = card.offsetWidth, ch = card.offsetHeight;
+  const place = (left, top) => { card.style.left = `${Math.round(left)}px`; card.style.top = `${Math.round(top)}px`; };
+
+  const r = tutTargetRect(st);
+  if (!r || (r.width < 2 && r.height < 2)) {
+    // Title slide (or the feature is missing): dim everything and centre the card.
+    spot.classList.add('none');
+    spot.style.left = `${vw / 2}px`; spot.style.top = `${vh / 2}px`;
+    spot.style.width = '0px'; spot.style.height = '0px';
+    arrow.style.display = 'none';
+    place((vw - cw) / 2, (vh - ch) / 2);
+    return;
+  }
+
+  // Glowing box around the feature, kept inside the window.
+  const PAD = 6;
+  const L = Math.max(3, r.left - PAD), T = Math.max(3, r.top - PAD);
+  const R = Math.min(vw - 3, r.right + PAD), B = Math.min(vh - 3, r.bottom + PAD);
+  spot.classList.remove('none');
+  spot.style.left = `${L}px`; spot.style.top = `${T}px`;
+  spot.style.width = `${R - L}px`; spot.style.height = `${B - T}px`;
+
+  const cx = (L + R) / 2, cy = (T + B) / 2;
+  const GAP = 64, M = 12; // GAP leaves room for the arrow between the box and the card
+  const space = { below: vh - B - M, above: T - M, right: vw - R - M, left: L - M };
+  const need = { below: ch + GAP, above: ch + GAP, right: cw + GAP, left: cw + GAP };
+
+  // Pick the side with the most spare room. On the full-screen editor (phones / tablets) the card docks instead.
+  let dir = null, best = -Infinity;
+  if (!(st.editor && tutCompactEditor())) {
+    for (const d of ['below', 'above', 'right', 'left']) {
+      const slack = space[d] - need[d];
+      if (slack >= 0 && slack > best) { best = slack; dir = d; }
+    }
+  }
+
+  if (!dir) {
+    // Nowhere to put both card and arrow: dock the card to the far edge and rely on the glowing box.
+    arrow.style.display = 'none';
+    place((vw - cw) / 2, cy < vh * 0.55 ? vh - ch - 10 : 10);
+    return;
+  }
+
+  const arrowAt = (x, y, deg) => {
+    arrow.style.display = 'block';
+    arrow.style.left = `${x}px`; arrow.style.top = `${y}px`;
+    arrow.style.transform = `rotate(${deg}deg)`;
+  };
+  if (dir === 'below' || dir === 'above') {
+    const left = clamp(cx - cw / 2, M, vw - cw - M);
+    place(left, dir === 'below' ? B + GAP : T - GAP - ch);
+    let ax = clamp(cx, left + 30, left + cw - 30);
+    ax = (R - L > 24) ? clamp(ax, L + 12, R - 12) : cx;
+    arrowAt(ax, dir === 'below' ? B + 28 : T - 28, dir === 'below' ? -90 : 90);
+  } else {
+    const top = clamp(cy - ch / 2, M, vh - ch - M);
+    place(dir === 'right' ? R + GAP : L - GAP - cw, top);
+    let ay = clamp(cy, top + 26, top + ch - 26);
+    ay = (B - T > 24) ? clamp(ay, T + 12, B - 12) : cy;
+    arrowAt(dir === 'right' ? R + 28 : L - 28, ay, dir === 'right' ? 180 : 0);
+  }
+}
+
+function TutorialButton() {
+  return button({
+    class: 'tutorial-btn',
+    'aria-label': 'Tutorial: how to use this tool',
+    title: 'Tutorial: how to use this tool',
+    onclick: () => tutOpen(),
+  }, '?');
+}
+
 function EditorUI() {
   // Build the overlay + dialog exactly once. Toggling `dialogOpen`
   // must never recreate these nodes - Dialog() reads many fields'
@@ -4633,6 +5026,7 @@ function EditorUI() {
     DiscordButton(),
     InstagramButton(),
     LinktreeButton(),
+    TutorialButton(),
     modalWrap,
   );
 }
