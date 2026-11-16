@@ -1659,6 +1659,115 @@ a {
     .editor-header h2 { font-size: 40px; }
     .editor-kicker { font-size: 16px; letter-spacing: 0.06em; }
   }
+  /* ---------- PHONES + TABLETS: editor menu goes full screen and packs tighter ----------
+     Narrow windows, and any touch-first device (tablets in landscape are wider than 950px).
+     Replaces the 580px side drawer with a screen-filling panel, drops the dimmed backdrop,
+     and shrinks spacing so more of the editor is visible without scrolling. Desktop is untouched. */
+  @media (max-width: 950px), (hover: none) and (pointer: coarse) {
+    .editor-overlay { display: none; }
+    .editor-dialog {
+      top: 0; right: 0; bottom: 0; left: 0;
+      width: 100vw;
+      max-width: none;
+      height: 100vh;
+      height: 100dvh;
+      border-left: 0;
+      box-shadow: none;
+      animation-name: edFade;
+    }
+    .editor-dialog::before { width: 4px; }
+
+    /* Header: slimmer, tighter title stack */
+    .editor-header {
+      padding: 8px calc(12px + env(safe-area-inset-right, 0px)) 12px calc(14px + env(safe-area-inset-left, 0px));
+    }
+    .editor-header::after { height: 4px; }
+    .editor-header h2 { gap: 3px; font-size: 28px; }
+    .editor-kicker { font-size: 12px; letter-spacing: 0.06em; }
+
+    /* Body: smaller gutters, respect notches / home bar */
+    .editor-body {
+      padding: 4px calc(14px + env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px));
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    .editor-section { padding: 12px 0; }
+    .editor-section::before { display: none; }              /* NO.01 tags: not needed once sections sit side by side */
+    .editor-section h3 { font-size: 24px; margin-bottom: 8px; padding-right: 0; }
+    .current-photo-hint { margin: -2px 0 8px; }
+
+    /* Fields + toggles */
+    .field { gap: 3px; margin-bottom: 8px; }
+    .editor-dialog input[type="text"],
+    .editor-dialog input[type="number"],
+    .editor-dialog textarea,
+    .editor-section select { padding: 6px 8px; }
+    .pixel-mode-toggle { margin-top: 8px; padding: 6px 10px; gap: 10px; }
+    .editor-section h3 + .pixel-mode-toggle { margin-bottom: 4px; }
+    .identity-fields { gap: 6px; }
+
+    /* Photo dropzone */
+    #profile-dropzone.dropzone { min-height: 130px; padding: 6px; }
+    #profile-dropzone.dropzone .dz-message { margin: 0.6em 0; font-size: 15px; }
+    #profile-dropzone.dropzone .dz-message::before { width: 30px; height: 30px; margin-bottom: 6px; font-size: 16px; }
+
+    /* Parameter + skill cards: smaller, and as many per row as fit */
+    .param-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 5px; }
+    .param-edit-row {
+      grid-template-columns: 40px minmax(0, 1fr) 30px;
+      gap: 2px 6px;
+      padding: 4px 6px 5px 10px;
+    }
+    .param-edit-row.skill-card { grid-template-columns: 40px minmax(0, 1fr); }
+    .param-edit-row .param-name { min-height: 22px; }
+    .param-edit-row .param-name-lbl { font-size: 20px; }
+    .editor-dialog .param-edit-row input[type="text"] { height: 32px; font-size: 16px; }
+    .editor-dialog .param-edit-row input[type="number"],
+    .editor-dialog .param-edit-row input[type="text"].digits-num { height: 32px; font-size: 28px; }
+    .param-edit-row .grade-preview { font-size: 30px; }
+    .param-edit-row .grade-preview-img { width: 20px; }
+    .param-edit-row .remove-param { width: 26px; height: 26px; }
+
+    /* Overlay choices */
+    .overlay-picker { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+    .overlay-option { padding: 4px 4px 6px; gap: 4px; }
+
+    /* Buttons + danger zone */
+    .add-param-btn { margin-top: 6px; padding: 9px 10px 7px; font-size: 22px; }
+    .reset-card-btn { padding: 14px 12px 9px; font-size: 24px; }
+    .danger-zone::after { margin-top: 10px; height: 8px; }
+  }
+
+  /* Identity block: narrower portrait column so the fields get the room. */
+  @media (min-width: 541px) and ((max-width: 950px), (hover: none) and (pointer: coarse)) {
+    .identity-grid { grid-template-columns: 150px minmax(0, 1fr); gap: 8px; }
+  }
+
+  /* Wide enough for two columns: IDENTITY | ABOUT ME on top, PARAMETERS AND SKILLS across the
+     full width, then OVERLAY | GAME OVER, with CREDITS below. */
+  @media (min-width: 640px) and ((max-width: 950px), (hover: none) and (pointer: coarse)) {
+    .editor-body {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 22px;
+      align-content: start;
+    }
+    .editor-body > .editor-section { min-width: 0; }
+    .editor-body > .editor-section:nth-child(1) { order: 1; }                         /* identity */
+    .editor-body > .editor-section:nth-child(3) { order: 2; }                         /* about me */
+    .editor-body > .editor-section:nth-child(2) { order: 3; grid-column: 1 / -1; }    /* parameters + skills */
+    .editor-body > .editor-section:nth-child(4) { order: 4; }                         /* overlay */
+    .editor-body > .editor-section:nth-child(5) { order: 5; }                         /* game over */
+    .editor-body > .editor-section:nth-child(6) { order: 6; grid-column: 1 / -1; }    /* credits */
+    .editor-body > .editor-section:nth-child(3) textarea { min-height: 150px; }
+  }
+
+  /* Short screens (phones in landscape): put the title and subtitle on one line. */
+  @media (max-height: 520px) and ((max-width: 950px), (hover: none) and (pointer: coarse)) {
+    .editor-header { padding-top: 6px; padding-bottom: 10px; }
+    .editor-header h2 { flex-direction: row-reverse; justify-content: flex-end; align-items: baseline; gap: 14px; font-size: 24px; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .editor-dialog, .editor-overlay { animation: none; }
     .editor-dialog::after { animation: none; }
