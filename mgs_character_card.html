@@ -465,6 +465,24 @@ a {
     padding-right: 10.6px; /* 13px to the ink after the glyph's 2.4px trailing space */
   }
 
+  /* Firefox sizes "line-height: normal" from the Peace Walker font's own
+     metrics, which come out much taller than in Chrome/Safari. In Chrome the
+     GMP+ box sets the stats row height and the LIFE/PSYCHE bars stretch to fill
+     it; in Firefox the bars' own text got taller than that, so the whole row
+     (and the portrait and parameters under it) grew. Pin the line heights to
+     the Chrome/Safari value so every browser lays this out identically. */
+  .stat-label, .stat-value { line-height: 0.624; }
+  /* Firefox also refuses to let an <input>'s line-height go below the font's
+     "normal" value (this is what stayed tall), so give the LIFE/PSYCHE number
+     inputs a fixed height too, like the GMP+ input already has. */
+  .stat-value .plain-number-input { height: 0.624em; line-height: 0.624; }
+  /* Belt and braces: take the bars' text out of the row's height calculation
+     entirely. flex-basis 0 + min-height 0 means the GMP+ box alone sets the row
+     height and the two bars simply split it, whatever height the font or the
+     browser gives the text inside them. */
+  .stat-bars { min-height: 0; }
+  .stat-bar { flex: 1 1 0; min-height: 0; }
+
   .gmp-box {
     background: #3a3a32;
     color: #fff;
