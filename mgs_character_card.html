@@ -471,11 +471,11 @@ a {
      it; in Firefox the bars' own text got taller than that, so the whole row
      (and the portrait and parameters under it) grew. Pin the line heights to
      the Chrome/Safari value so every browser lays this out identically. */
-  .stat-label, .stat-value { line-height: 0.624; }
+  .stat-label, .stat-value { line-height: 0.625; }
   /* Firefox also refuses to let an <input>'s line-height go below the font's
      "normal" value (this is what stayed tall), so give the LIFE/PSYCHE number
      inputs a fixed height too, like the GMP+ input already has. */
-  .stat-value .plain-number-input { height: 0.624em; line-height: 0.624; }
+  .stat-value .plain-number-input { height: 0.625em; line-height: 0.625; }
   /* Belt and braces: take the bars' text out of the row's height calculation
      entirely. flex-basis 0 + min-height 0 means the GMP+ box alone sets the row
      height and the two bars simply split it, whatever height the font or the
@@ -679,6 +679,10 @@ a {
     align-items: flex-end;
     justify-content: center;
     min-height: 0.6em; /* was 1.3em at the old 19.2px size (~25px) */
+    /* Pinned to the Chrome/Safari value: Firefox's "normal" line-height for the
+       Peace Walker font is much taller, which made this box grow and pushed the
+       parameter icons up out of place. */
+    line-height: 0.625;
     font-size: 2.1667em;
     top: 3.2px; /* text only; cap bottom 8px above the cell bottom like the reference */
   }
