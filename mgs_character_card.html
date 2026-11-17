@@ -33,6 +33,12 @@
   /* Ignore Windows High Contrast / forced-colors mode: keep the page's own colors. */
   html, body, *, *::before, *::after { forced-color-adjust: none; }
 
+  /* Keep the page's own look regardless of OS/browser accessibility or display settings:
+     - mobile/OS font-size boosting and text inflation
+     - printing / saving as PDF dropping background colors and images */
+  html { -webkit-text-size-adjust: 100%; -moz-text-size-adjust: 100%; text-size-adjust: 100%; }
+  *, *::before, *::after { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
   body {
     margin: 0;
     font-family: 'Courier New', Courier, monospace;
