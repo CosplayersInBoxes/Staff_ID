@@ -30,6 +30,9 @@
 
   * { box-sizing: border-box; }
 
+  /* Ignore Windows High Contrast / forced-colors mode: keep the page's own colors. */
+  html, body, *, *::before, *::after { forced-color-adjust: none; }
+
   body {
     margin: 0;
     font-family: 'Courier New', Courier, monospace;
