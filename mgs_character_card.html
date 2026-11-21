@@ -62,6 +62,7 @@
 
   html { height: 100%; }
   html.fit-card, html.fit-card body { overflow: hidden; }
+  html.khaki-off body { background: #000; } /* khaki toggle off: no khaki to match, keep the dark page */
   #app { flex: none; } /* placed on whole pixels by applyMobileScale(); scrolls when the window is smaller */
 
   /* The card is always drawn at its fixed design size (1280px wide) - it is NOT scaled to the
@@ -71,7 +72,7 @@
   body {
     margin: 0;
     font-family: 'Courier New', Courier, monospace;
-    background: #000;
+    background: var(--bg-color); /* same khaki as the card, so any space the card does not cover is not a black border */
     display: flex;
     min-height: 100%;
     padding: 0 64px;
@@ -122,7 +123,7 @@ a {
     position: relative;
     flex: none;
     margin: auto;
-    width: 1280px;
+    width: var(--paper-w, 1280px);
     overflow: hidden;
     /* Preview-only checkerboard: shows through when the khaki toggle is off. Not exported. */
     background: repeating-conic-gradient(#d4d4d4 0% 25%, #fff 0% 50%) 0 0 / 24px 24px;
@@ -1018,7 +1019,7 @@ a {
   /* ---------- Floating action buttons (top right) ---------- */
   .hamburger-btn, .download-btn, .discord-btn, .instagram-btn, .linktree-btn, .tutorial-btn {
     position: fixed;
-    top: 24px;
+    top: calc(var(--card-t, 0px) + 24px); /* anchored to the card's top-right corner (--card-t / --card-r are set by applyMobileScale) */
     z-index: 1000;
     width: 52px;
     height: 52px;
@@ -1037,12 +1038,12 @@ a {
     text-decoration: none;
     transition: color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
   }
-  .hamburger-btn { right: 24px; flex-direction: column; gap: 5px; }
-  .download-btn  { right: 88px; font-size: 1.5em; line-height: 1; }
-  .discord-btn   { right: 152px; }
-  .instagram-btn { right: 216px; }
-  .linktree-btn  { right: 280px; }
-  .tutorial-btn  { right: 344px; font-size: 1.6em; font-weight: bold; line-height: 1; }
+  .hamburger-btn { right: calc(var(--card-r, 0px) + 24px); flex-direction: column; gap: 5px; }
+  .download-btn  { right: calc(var(--card-r, 0px) + 88px); font-size: 1.5em; line-height: 1; }
+  .discord-btn   { right: calc(var(--card-r, 0px) + 152px); }
+  .instagram-btn { right: calc(var(--card-r, 0px) + 216px); }
+  .linktree-btn  { right: calc(var(--card-r, 0px) + 280px); }
+  .tutorial-btn  { right: calc(var(--card-r, 0px) + 344px); font-size: 1.6em; font-weight: bold; line-height: 1; }
   .hamburger-btn:hover, .download-btn:hover, .discord-btn:hover, .instagram-btn:hover, .linktree-btn:hover, .tutorial-btn:hover {
     color: var(--cc-green);
     background: var(--cc-panel-hi);
@@ -2109,13 +2110,24 @@ a {
      Kept in one block, after all other card rules, so it wins the cascade. */
   .paper {
     aspect-ratio: auto;
-    height: 731px;                     /* was 1280 / 1.75 = 731.43 */
+    /* Preview only: applyMobileScale() sets --paper-w / --paper-h so the paper (khaki + watermark) grows to the shape of
+       the window, i.e. the card fills the browser with nothing around it. The content block (.grid below) stays exactly
+       1280x731 and is centred in it. During PNG export the variables are put back, so the export is always 1280x731. */
+    width: var(--paper-w, 1280px);
+    min-width: var(--paper-w, 1280px);
+    height: var(--paper-h, 731px);     /* was 1280 / 1.75 = 731.43 */
     text-rendering: geometricPrecision; /* same unhinted, sub-pixel text positioning in every engine */
     font-kerning: normal;
     font-variant-ligatures: none;
     -webkit-font-smoothing: antialiased;
   }
   .grid {
+    inset: auto;
+    left: calc((100% - 1280px) / 2);   /* content block keeps its exact 1280x731 size, centred in the (possibly larger) paper */
+    top: calc((100% - 731px) / 2);
+    width: 1280px;
+    height: 731px;
+    box-sizing: border-box;
     padding: 55px 46px 37px;           /* was 3.5714% = 45.71px all round. CENTRED: left/right stay equal (46px each); top/bottom centred separately against the full card height (731px): content block (portrait top to quote-box bottom, 657px tall) shifted down 9px (top 46->55, bottom 46->37) so it sits 37px from the top edge and 37px from the bottom edge. No box changes size; watermark and toolbar buttons are untouched. */
     grid-template-columns: 309px minmax(0, 1fr);   /* was 26% */
     grid-template-rows: 145px 142px 1fr;           /* header | params+sick | bottom; 145 + 10 + 142 = portrait 297 */
@@ -4986,6 +4998,9 @@ async function downloadCardPng(triggerBtn) {
   // Make sure the Peace Walker font is really loaded and no bar is mid-transition before the clone is taken,
   // and capture at an exact, fixed size so every browser produces the same 2560x1462 image.
   cardEl.classList.add('exporting');
+  // The on-screen paper may be larger than the card (it fills the window): capture the real 1280x731 card.
+  document.documentElement.style.setProperty('--paper-w', '1280px');
+  document.documentElement.style.setProperty('--paper-h', '731px');
   // Pixel-art icons: work out a size that is a whole number of half-CSS-px per icon pixel (whole device px at 2x)
   // so no browser resamples at a fractional scale. Only icons that are already within 4% of such a size are
   // nudged, and only inside the screenshot's clone (see onCloneEachNode below) - the live card is never touched.
@@ -5037,6 +5052,7 @@ async function downloadCardPng(triggerBtn) {
   } finally {
     if (fitWrap) fitWrap.style.transform = prevFitTransform;
     cardEl.classList.remove('exporting');
+    applyMobileScale(); // puts the window-filling paper size back
     markUntouchedSkillsForExport(false);
     markUntouchedQuoteForExport(false);
     if (tickerEl) tickerEl.style.display = prevTickerDisplay;
@@ -5478,6 +5494,7 @@ function drawAllSickHatches() {
 window.addEventListener('resize', drawAllSickHatches);
 // Repaint the hatch cells' khaki base whenever the toggle changes.
 van.derive(() => { khakiEnabled.val; requestAnimationFrame(drawAllSickHatches); });
+van.derive(() => { document.documentElement.classList.toggle('khaki-off', !khakiEnabled.val); });
 
 // ---------- mobile scaling ----------
 // .paper is a fixed 1280px-wide design (grid columns, em-based font
@@ -5494,6 +5511,15 @@ van.derive(() => { khakiEnabled.val; requestAnimationFrame(drawAllSickHatches); 
 // Desktop is entirely unaffected: above the breakpoint every inline
 // style this sets is cleared, leaving the original CSS (width:1280px;
 // max-width:100%; aspect-ratio) in full control, exactly as before.
+// Places the toolbar buttons on the card's top-right corner: --card-t is the card's top edge and --card-r the gap
+// between the card's right edge and the window's right edge. The buttons keep their own fixed size (they are not
+// scaled with the card). On narrow windows the buttons keep their stacked strip along the window edge instead.
+function anchorToolbar(wrap, root, narrow) {
+  if (!wrap) return;
+  const r = wrap.getBoundingClientRect();
+  root.style.setProperty('--card-t', narrow ? '0px' : Math.round(r.top) + 'px');
+  root.style.setProperty('--card-r', narrow ? '0px' : Math.max(0, Math.round(root.clientWidth - r.right)) + 'px');
+}
 function applyMobileScale() {
   // The card is never scaled: it is always drawn at its fixed 1280px design size, so window size
   // and browser toolbars can't change how big anything is. All this does is position it:
@@ -5517,30 +5543,39 @@ function applyMobileScale() {
   if (wrap && !(editing && tutCompactEditor())) {
     const narrow = window.matchMedia('(max-width: 950px)').matches;
     const dlg = document.querySelector('.editor-dialog');
-    const M = 16;
+    const M = editing ? 16 : 0; // menu closed: the card goes edge to edge, no margin around it
     const resR = editing ? ((dlg && dlg.offsetWidth) || 580) : (narrow ? 60 : 0);
-    const resT = (!editing && !narrow) ? 84 : 0;
+    const resT = 0; // the toolbar buttons now sit on the card's top-right corner, so no strip is reserved for them
     const aw = root.clientWidth - 2 * M - resR, ah = root.clientHeight - 2 * M - resT;
     // Menu closed: the card is scaled up or down to fill the window. Editor open: shrink-only (never above 100%).
     const k = Math.max(0.05, Math.min(editing ? 1 : Infinity, aw / CARD_W, ah / CARD_H));
-    if (editing || Math.abs(k - 1) > 0.001) {
+    // Menu closed: grow the paper (in design pixels, whole numbers, same parity as 1280x731 so the centred content
+    // block lands on whole pixels) until it exactly fills the free area; the content block itself is never resized.
+    const PW = editing ? CARD_W : CARD_W + 2 * Math.max(0, Math.round((aw / k - CARD_W) / 2));
+    const PH = editing ? CARD_H : CARD_H + 2 * Math.max(0, Math.round((ah / k - CARD_H) / 2));
+    root.style.setProperty('--paper-w', PW + 'px');
+    root.style.setProperty('--paper-h', PH + 'px');
+    { // always fit (even at exactly 100%) so the card and the toolbar buttons are placed from the card's real position
       root.classList.add('fit-card');
       wrap.style.transform = '';
       wrap.style.transformOrigin = '0 0';
       app.style.margin = '0px';
       window.scrollTo(0, 0);
       const r = wrap.getBoundingClientRect();
-      const x = M + Math.max(0, (aw - CARD_W * k) / 2), y = M + resT + Math.max(0, (ah - CARD_H * k) / 2);
+      const x = M + Math.max(0, (aw - PW * k) / 2), y = M + resT + Math.max(0, (ah - PH * k) / 2);
       wrap.style.transform = `translate(${Math.round(x - r.left)}px, ${Math.round(y - r.top)}px) scale(${k})`;
+      anchorToolbar(wrap, root, narrow);
       return;
     }
   }
   root.classList.remove('fit-card');
+  root.style.removeProperty('--paper-w'); root.style.removeProperty('--paper-h');
   if (wrap) { wrap.style.transform = ''; wrap.style.transformOrigin = ''; }
   const touch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
   const mx = Math.max(0, Math.floor((root.clientWidth - 2 * SIDE - CARD_W) / 2));
   const my = touch ? 0 : Math.max(0, Math.floor((root.clientHeight - CARD_H) / 2));
   app.style.margin = my + 'px ' + mx + 'px';
+  anchorToolbar(wrap, root, window.matchMedia('(max-width: 950px)').matches);
 }
 window.addEventListener('resize', applyMobileScale);
 window.addEventListener('orientationchange', applyMobileScale);
