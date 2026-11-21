@@ -2116,7 +2116,7 @@ a {
     -webkit-font-smoothing: antialiased;
   }
   .grid {
-    padding: 46px;                     /* was 3.5714% = 45.71px */
+    padding: 55px 46px 37px;           /* content group centred vertically: the portrait pokes 18px above the grid, so top/bottom gaps are 28/46 at 46px padding; shifting the whole grid down 9px makes both 37px (left/right stay 46px). Grid height is unchanged, so no box changes size. */
     grid-template-columns: 309px minmax(0, 1fr);   /* was 26% */
     grid-template-rows: 145px 142px 1fr;           /* header | params+sick | bottom; 145 + 10 + 142 = portrait 297 */
     column-gap: 24px;                  /* was 2% */
