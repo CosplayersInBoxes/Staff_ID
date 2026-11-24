@@ -4921,7 +4921,83 @@ function pngCrc32(bytes, start, end) {
   for (let i = start; i < end; i++) c = PNG_CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
   return (c ^ 0xFFFFFFFF) >>> 0;
 }
-function encodeUncompressedPng(canvas) {
+// ---------- PNG debug metadata ----------
+// A tEXt chunk (keyword "Debug-Info") holding the device/browser details, so a card that was saved looking wrong
+// can be diagnosed from the file itself. tEXt is Latin-1 only, so anything else becomes "?".
+function pngTextChunkData(keyword, text) {
+  const latin1 = String(text).replace(/\r\n?/g, '\n').replace(/[^\x20-\x7E\xA1-\xFF\n]/g, '?');
+  const data = new Uint8Array(keyword.length + 1 + latin1.length);
+  let i = 0;
+  for (const ch of keyword) data[i++] = ch.charCodeAt(0);
+  data[i++] = 0;
+  for (let k = 0; k < latin1.length; k++) data[i++] = latin1.charCodeAt(k);
+  return data;
+}
+// Fallback path only: inserts the tEXt chunk into an already-encoded PNG, right after IHDR.
+function addDebugTextToPng(pngBytes, metaText) {
+  const data = pngTextChunkData('Debug-Info', metaText);
+  const chunkBytes = new Uint8Array(12 + data.length);
+  const cdv = new DataView(chunkBytes.buffer);
+  cdv.setUint32(0, data.length);
+  chunkBytes.set([0x74, 0x45, 0x58, 0x74], 4); // "tEXt"
+  chunkBytes.set(data, 8);
+  cdv.setUint32(8 + data.length, pngCrc32(chunkBytes, 4, 8 + data.length));
+  const at = 8 + 12 + 13; // signature + IHDR chunk
+  const out = new Uint8Array(pngBytes.length + chunkBytes.length);
+  out.set(pngBytes.subarray(0, at), 0);
+  out.set(chunkBytes, at);
+  out.set(pngBytes.subarray(at), at + chunkBytes.length);
+  return out;
+}
+async function collectDebugInfo(canvas) {
+  const lines = [];
+  const add = (k, v) => { try { if (v !== undefined && v !== null && v !== '') lines.push(k + ': ' + v); } catch (e) {} };
+  const mq = (q) => { try { return window.matchMedia(q).matches; } catch (e) { return 'n/a'; } };
+  const nav = navigator;
+  add('Exported', new Date().toISOString());
+  add('Page', location.origin + location.pathname);
+  add('User agent', nav.userAgent);
+  add('Platform', nav.platform);
+  add('Vendor', nav.vendor);
+  add('Languages', (nav.languages && nav.languages.join(', ')) || nav.language);
+  const uad = nav.userAgentData;
+  if (uad) {
+    add('UA brands', (uad.brands || []).map(b => b.brand + ' ' + b.version).join(', '));
+    add('UA mobile', uad.mobile);
+    add('UA platform', uad.platform);
+    try {
+      const hi = await Promise.race([
+        uad.getHighEntropyValues(['platformVersion', 'model', 'architecture', 'uaFullVersion']),
+        new Promise(r => setTimeout(() => r(null), 1000)),
+      ]);
+      if (hi) {
+        add('UA platform version', hi.platformVersion);
+        add('UA device model', hi.model);
+        add('UA architecture', hi.architecture);
+        add('UA full version', hi.uaFullVersion);
+      }
+    } catch (e) {}
+  }
+  add('Screen', screen.width + 'x' + screen.height + ' (avail ' + screen.availWidth + 'x' + screen.availHeight + ')');
+  add('Viewport', window.innerWidth + 'x' + window.innerHeight);
+  add('Visual viewport', window.visualViewport ? Math.round(window.visualViewport.width) + 'x' + Math.round(window.visualViewport.height) + ' scale ' + window.visualViewport.scale : '');
+  add('Device pixel ratio', window.devicePixelRatio);
+  add('Orientation', screen.orientation ? screen.orientation.type : '');
+  add('Touch points', nav.maxTouchPoints);
+  add('CPU threads', nav.hardwareConcurrency);
+  add('Device memory GB', nav.deviceMemory);
+  add('Color depth', screen.colorDepth);
+  add('Prefers dark', mq('(prefers-color-scheme: dark)'));
+  add('Forced colors', mq('(forced-colors: active)'));
+  add('Prefers more contrast', mq('(prefers-contrast: more)'));
+  add('Reduced motion', mq('(prefers-reduced-motion: reduce)'));
+  add('Standalone app', mq('(display-mode: standalone)'));
+  add('Canvas', canvas.width + 'x' + canvas.height);
+  add('Time zone', (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { return ''; } })());
+  return lines.join('\n');
+}
+
+function encodeUncompressedPng(canvas, metaText) {
   const w = canvas.width, h = canvas.height;
   const px = canvas.getContext('2d').getImageData(0, 0, w, h).data;
   const rowLen = w * 4;
@@ -4955,7 +5031,8 @@ function encodeUncompressedPng(canvas) {
   z[zi++] = adler >>> 24; z[zi++] = (adler >>> 16) & 0xFF; z[zi++] = (adler >>> 8) & 0xFF; z[zi++] = adler & 0xFF;
   // PNG file
   const sig = [137, 80, 78, 71, 13, 10, 26, 10];
-  const out = new Uint8Array(8 + (12 + 13) + (12 + z.length) + 12);
+  const metaData = metaText ? pngTextChunkData('Debug-Info', metaText) : null;
+  const out = new Uint8Array(8 + (12 + 13) + (metaData ? 12 + metaData.length : 0) + (12 + z.length) + 12);
   const dv = new DataView(out.buffer);
   let o = 0;
   out.set(sig, o); o += 8;
@@ -4971,6 +5048,7 @@ function encodeUncompressedPng(canvas) {
   ih.setUint32(0, w); ih.setUint32(4, h);
   ihdr[8] = 8; ihdr[9] = 6; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0; // 8-bit RGBA, no interlace
   chunk('IHDR', ihdr);
+  if (metaText) chunk('tEXt', pngTextChunkData('Debug-Info', metaText));
   chunk('IDAT', z);
   chunk('IEND', new Uint8Array(0));
   return new Blob([out], { type: 'image/png' });
@@ -5053,9 +5131,19 @@ async function downloadCardPng(triggerBtn) {
       },
     });
     // Level-0 (uncompressed) PNG; falls back to the browser's own encoder if anything goes wrong.
+    let debugText = '';
+    try { debugText = await collectDebugInfo(canvas); } catch (e) { console.error('Debug info failed:', e); }
     let href, blobUrl = null;
-    try { blobUrl = URL.createObjectURL(encodeUncompressedPng(canvas)); href = blobUrl; }
-    catch (encErr) { console.error('Uncompressed PNG failed, using canvas encoder:', encErr); href = canvas.toDataURL('image/png'); }
+    try { blobUrl = URL.createObjectURL(encodeUncompressedPng(canvas, debugText)); href = blobUrl; }
+    catch (encErr) {
+      console.error('Uncompressed PNG failed, using canvas encoder:', encErr);
+      href = canvas.toDataURL('image/png');
+      try {
+        const buf = new Uint8Array(await (await fetch(href)).arrayBuffer());
+        blobUrl = URL.createObjectURL(new Blob([addDebugTextToPng(buf, debugText)], { type: 'image/png' }));
+        href = blobUrl;
+      } catch (metaErr) { console.error('Could not add debug info to fallback PNG:', metaErr); }
+    }
     const link = document.createElement('a');
     link.download = `${safeFileName(codename.val)}.png`;
     link.href = href;
