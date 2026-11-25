@@ -24,9 +24,111 @@
 <meta name="theme-color" content="#b8b8a0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.css">
 <script>try { document.documentElement.classList.toggle('ed-yellow', localStorage.getItem('cib-editor-theme') !== 'green'); } catch (e) { document.documentElement.classList.add('ed-yellow'); }</script>
+<script>
+/* Landscape lock: window.CIBView
+   On a touch device held upright the whole page is turned 90 degrees (html.force-land, see the CSS) so the app
+   always opens in landscape and stays there however the phone is held. When the phone is really in landscape the
+   browser's own viewport is used and nothing is turned. Everything that reads the window size or pointer /
+   element positions goes through this object so it keeps working while turned:
+     w()/h()    page size (root client size)       iw()/ih()   page size (inner size)
+     pt(e)      pointer position in the page's own (turned) coordinates -> {x, y}
+     rect(el)   getBoundingClientRect() converted to the page's own coordinates
+   While turned, media queries (CSS rules and window.matchMedia) are answered as if the viewport had its
+   width and height swapped, so every existing breakpoint behaves exactly as on a phone held sideways. */
+(function () {
+  var root = document.documentElement;
+  var rawMM = window.matchMedia.bind(window);
+  var on = false, physW = 0, physH = 0, synced = null;
+  var origMedia = new Map();
+
+  function swapQuery(q) {
+    return String(q)
+      .replace(/\b(min-|max-)?(width|height)\b/g, function (m, pre, dim) { return (pre || '') + (dim === 'width' ? 'height' : 'width'); })
+      .replace(/orientation\s*:\s*(portrait|landscape)/g, function (m, o) { return 'orientation: ' + (o === 'portrait' ? 'landscape' : 'portrait'); });
+  }
+  window.matchMedia = function (q) { return rawMM(on ? swapQuery(q) : q); };
+
+  function eachMediaRule(rules, fn) {
+    for (var i = 0; i < rules.length; i++) {
+      var r = rules[i];
+      if (typeof CSSMediaRule !== 'undefined' && r instanceof CSSMediaRule) fn(r);
+      if (r.cssRules && r.cssRules.length) eachMediaRule(r.cssRules, fn);
+    }
+  }
+  function syncMedia() {
+    for (var s = 0; s < document.styleSheets.length; s++) {
+      var rules; try { rules = document.styleSheets[s].cssRules; } catch (e) { continue; } // cross-origin sheet
+      if (!rules) continue;
+      eachMediaRule(rules, function (r) {
+        if (!origMedia.has(r)) origMedia.set(r, r.media.mediaText);
+        var o = origMedia.get(r);
+        r.media.mediaText = on ? swapQuery(o) : o;
+      });
+    }
+    synced = on;
+  }
+
+  function wantTurned(w, h) {
+    if (!rawMM('(hover: none) and (pointer: coarse)').matches) return false; // desktop / mouse: never
+    if (w > 930) return false;                                               // big tablets: plenty of room already
+    var so = window.screen && screen.orientation && screen.orientation.type;
+    return so ? so.indexOf('portrait') === 0 : w < h;
+  }
+
+  function update(force) {
+    var w = root.clientWidth, h = root.clientHeight;
+    if (!w || !h) return;
+    var want = wantTurned(w, h), flipped = want !== on;
+    on = want;
+    if (on) {
+      physW = w; physH = h;
+      root.style.setProperty('--phys-w', w + 'px');
+      root.style.setProperty('--stage-w', h + 'px');
+      root.style.setProperty('--stage-h', w + 'px');
+      root.style.setProperty('--vw100', h + 'px');
+      root.style.setProperty('--vh100', w + 'px');
+      root.classList.add('force-land');
+    } else {
+      root.classList.remove('force-land');
+      ['--phys-w', '--stage-w', '--stage-h', '--vw100', '--vh100'].forEach(function (k) { root.style.removeProperty(k); });
+    }
+    if (synced !== on || force === true) syncMedia();
+    if (flipped && typeof window.__cibModeChanged === 'function') window.__cibModeChanged();
+  }
+
+  window.CIBView = {
+    get on() { return on; },
+    w: function () { return on ? physH : root.clientWidth; },
+    h: function () { return on ? physW : root.clientHeight; },
+    iw: function () { return on ? physH : window.innerWidth; },
+    ih: function () { return on ? physW : window.innerHeight; },
+    pt: function (e) { return on ? { x: e.clientY, y: physW - e.clientX } : { x: e.clientX, y: e.clientY }; },
+    rect: function (el) {
+      var r = el.getBoundingClientRect();
+      if (!on) return r;
+      var left = r.top, right = r.bottom, top = physW - r.right, bottom = physW - r.left;
+      return { left: left, right: right, top: top, bottom: bottom, width: right - left, height: bottom - top, x: left, y: top };
+    },
+    update: update
+  };
+
+  window.addEventListener('resize', function () { update(); });
+  window.addEventListener('orientationchange', function () { update(); });
+  try { screen.orientation.addEventListener('change', function () { update(); }); } catch (e) {}
+  document.addEventListener('DOMContentLoaded', function () { update(true); });
+  window.addEventListener('load', function () { update(true); });
+  // Where the browser allows it (installed web apps / fullscreen on Android) really lock landscape; elsewhere this is a no-op.
+  document.addEventListener('pointerdown', function () {
+    if (!on) return;
+    try { var p = screen.orientation.lock('landscape'); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }, { once: true, passive: true });
+  update();
+})();
+</script>
 <style>
   :root {
     color-scheme: only light; /* ignore browser dark mode / auto-dark */
+    --vw100: 100vw; --vh100: 100vh; /* the page's own width/height: the head script overrides them while the page is turned to landscape */
     --bg-color: #b8b8a0; /* sampled from the in-game screenshot's khaki paper */
     --red: #fd1510; /* in-game bright red (was #d81e05, too dark/orange) */
     --dark: #32322b; /* in-game dark olive panel (was neutral #2b2b2b) */
@@ -64,6 +166,8 @@
     font-display: block;
     ascent-override: 77.78%; descent-override: 22.22%; line-gap-override: 0%;
   }
+
+  @supports (height: 100dvh) { :root { --vh100: 100dvh; } }
 
   * { box-sizing: border-box; }
 
@@ -145,54 +249,24 @@ a {
     background: repeating-conic-gradient(#d4d4d4 0% 25%, #fff 0% 50%) 0 0 / 24px 24px;
   }
 
-  /* The card is a wide, landscape-shaped ID card - on a phone held
-     upright there just isn't enough width to show it at a usable size
-     even with the scaling above, so portrait phone users see this
-     prompt instead of the (hidden) card until they rotate. Pure CSS,
-     no JS: the media query alone shows/hides it live as the device
-     rotates. Desktop and landscape phones/tablets never see it. */
-  .rotate-prompt {
-    display: none;
-  }
-
-  @media (hover: none) and (pointer: coarse) and (max-width: 930px) and (orientation: portrait) {
-    .rotate-prompt {
-      display: flex;
-      position: fixed;
-      inset: 0;
-      z-index: 3000;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      padding: 32px;
-      text-align: center;
-      background: #000;
-      color: #fff;
-      font-family: 'Courier New', Courier, monospace;
-    }
-    .rotate-prompt .rotate-icon {
-      font-size: 3em;
-      line-height: 1;
-      animation: rotate-hint 1.8s ease-in-out infinite;
-    }
-    .rotate-prompt .rotate-text {
-      max-width: 26em;
-      font-size: 1.1em;
-      letter-spacing: 1px;
-    }
-    /* #app holds both the card and the editor UI (hamburger/download
-       buttons, dialog) - all of it waits behind the prompt until the
-       phone is rotated, rather than leaving controls tappable behind
-       an overlay that only covers the card. */
-    #app {
-      display: none;
-    }
-  }
-
-  @keyframes rotate-hint {
-    0%, 100% { transform: rotate(0deg); }
-    50% { transform: rotate(90deg); }
+  /* LANDSCAPE LOCK (phones / small tablets). The card is a wide, landscape-shaped ID card, so on a
+     touch device held upright the whole page (body: card, toolbar buttons, editor, tutorial, cropper -
+     everything is inside it) is drawn turned 90 degrees, so it always appears in landscape no matter
+     how the phone is held, and no "please rotate your device" screen is needed. When the phone is
+     really turned sideways the browser's own landscape viewport is used and none of this applies.
+     The head script (window.CIBView) switches the class on and sets the variables:
+       --phys-w  real viewport width      --stage-w / --stage-h  the turned page's size (= real height / width)
+     position:fixed descendants (buttons, editor dialog, tutorial, cropper, tooltip) are positioned against
+     the turned body, so they turn with it. */
+  html.force-land { overflow: hidden; }
+  html.force-land body {
+    position: fixed;
+    left: 0; top: 0;
+    min-height: 0;
+    width: var(--stage-w);
+    height: var(--stage-h);
+    transform-origin: 0 0;
+    transform: translateX(var(--phys-w)) rotate(90deg);
   }
 
   @media (max-width: 930px) {
@@ -1117,7 +1191,7 @@ a {
   .tut-layer {
     position: fixed;
     inset: 0;
-    z-index: 2000; /* above the editor (1001/1002) and the corner buttons (1000), below the rotate prompt (3000) */
+    z-index: 2000; /* above the editor (1001/1002) and the corner buttons (1000), below the hover tooltip (4000) and cropper (100000) */
     font-family: var(--ed-mono);
     color: var(--cc-text);
   }
@@ -1162,7 +1236,7 @@ a {
     left: 0;
     top: 0;
     box-sizing: border-box;
-    width: min(460px, calc(100vw - 24px));
+    width: min(460px, calc(var(--vw100) - 24px));
     padding: 18px 20px 15px;
     background: var(--ed-scan), var(--cc-panel);
     clip-path: var(--ed-chamfer);
@@ -1220,7 +1294,7 @@ a {
 
   /* Phones / short windows: tighter card. */
   @media (max-width: 540px), (max-height: 520px) {
-    .tut-card { width: min(320px, calc(100vw - 24px)); padding: 10px 12px 9px; }
+    .tut-card { width: min(320px, calc(var(--vw100) - 24px)); padding: 10px 12px 9px; }
     .tut-step { font-size: 15px; }
     .tut-title { font-size: 19px; margin-bottom: 4px; }
     .tut-text { font-size: 12.5px; line-height: 1.35; }
@@ -1257,7 +1331,7 @@ a {
     right: 0;
     bottom: 0;
     width: 580px;
-    max-width: 100vw;
+    max-width: var(--vw100);
     box-sizing: border-box;
     /* Radar grid */
     background:
@@ -1858,7 +1932,7 @@ a {
     .identity-grid { grid-template-columns: minmax(0, 1fr); }
   }
   @media (max-width: 480px) {
-    .editor-dialog { width: 100vw; }
+    .editor-dialog { width: var(--vw100); }
     .editor-body { padding-left: 24px; padding-right: 18px; }
     .editor-header h2 { font-size: 40px; }
     .editor-kicker { font-size: 16px; letter-spacing: 0.06em; }
@@ -1871,10 +1945,9 @@ a {
     .editor-overlay { display: none; }
     .editor-dialog {
       top: 0; right: 0; bottom: 0; left: 0;
-      width: 100vw;
+      width: var(--vw100);
       max-width: none;
-      height: 100vh;
-      height: 100dvh;
+      height: var(--vh100);
       border-left: 0;
       box-shadow: none;
       animation-name: edFade;
@@ -2151,6 +2224,26 @@ a {
     row-gap: 10px;                     /* was 1.5% */
   }
   .ticker-tape { height: 29px; }       /* was 4% */
+  /* WATERMARK stays put on wide windows. It used to be the .card background, so it was sized and pinned to the edges of the
+     whole (window-sized) paper and drifted/grew as the window widened. It now lives on a layer exactly the size of the
+     centred 1280x731 content block (same box as .grid), so it keeps its size and its place relative to the card contents
+     at any window size; only the khaki keeps filling the window. At 1280x731 (and in the PNG export) this is identical to
+     before. The editor's watermark thumbnails are not inside .paper, so they are untouched. */
+  .paper > .card,
+  .paper > .card.watermark-cib2026,
+  .paper > .card.watermark-temp { background-image: none; }
+  .paper > .card::before {
+    content: '';
+    position: absolute;
+    left: calc((100% - 1280px) / 2);
+    top: calc((100% - 731px) / 2);
+    width: 1280px;
+    height: 731px;
+    pointer-events: none;
+    background: url('MSF_WATERMARK.png') right center / contain no-repeat;
+  }
+  .paper > .card.watermark-cib2026::before { background-image: url('COSPLAYERS_IN_BOXES.png'); }
+  .paper > .card.watermark-temp::before { background-image: url('OUTER_HEAVEN.png'); }
   .header-col { gap: 5px; }
   .codename { font-size: 26.5px; line-height: 47px; }
   .subtitle { font-size: 25px; line-height: 23px; }
@@ -2216,11 +2309,6 @@ a {
 </head>
 <body>
 
-<div class="rotate-prompt">
-  <div class="rotate-icon">📱</div>
-  <div class="rotate-text">Please rotate your device to landscape in order<br>to view and edit your Cosplayers In Boxes Membership Card.</div>
-</div>
-
 <div id="app"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.js"></script>
@@ -2229,6 +2317,8 @@ a {
 import van from 'https://cdn.jsdelivr.net/gh/vanjs-org/van/public/van-1.6.0.min.js';
 
 Dropzone.autoDiscover = false;
+
+const VP = window.CIBView; // landscape lock helper (see the head script)
 
 const { div, span, button, input, textarea, h2, h3, img, canvas, a } = van.tags;
 
@@ -2251,8 +2341,9 @@ function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
 
   const place = e => {
     const pad = 4;
-    const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - pad);
-    const y = Math.min(e.clientY + 18, window.innerHeight - tip.offsetHeight - pad);
+    const pt = VP.pt(e);
+    const x = Math.min(pt.x + 14, VP.iw() - tip.offsetWidth - pad);
+    const y = Math.min(pt.y + 18, VP.ih() - tip.offsetHeight - pad);
     tip.style.transform = `translate(${Math.max(pad, x)}px, ${Math.max(pad, y)}px)`;
   };
 
@@ -2287,13 +2378,14 @@ function makeBarDraggable(el, orientation, onScrub) {
   let dragging = false;
 
   const fractionFromEvent = e => {
-    const rect = el.getBoundingClientRect();
+    const rect = VP.rect(el);
+    const pt = VP.pt(e);
     if (orientation === 'horizontal') {
-      return rect.width > 0 ? clamp((e.clientX - rect.left) / rect.width, 0, 1) : 0;
+      return rect.width > 0 ? clamp((pt.x - rect.left) / rect.width, 0, 1) : 0;
     }
     // Vertical bars fill from the bottom up, so "fraction full" is
     // measured from the bottom edge, not the usual top-down y.
-    return rect.height > 0 ? clamp((rect.bottom - e.clientY) / rect.height, 0, 1) : 0;
+    return rect.height > 0 ? clamp((rect.bottom - pt.y) / rect.height, 0, 1) : 0;
   };
 
   el.addEventListener('pointerdown', e => {
@@ -2334,14 +2426,14 @@ function makeHorizontalValueDrag(el, state, max) {
     if (e.button !== undefined && e.button !== 0) return;
     pending = true;
     dragging = false;
-    startX = e.clientX;
+    startX = VP.pt(e).x;
     startVal = clamp(Math.round(Number(state.val)) || 0, 0, max);
     const digits = String(startVal).length;
     step = 10 * Math.pow(10, Math.max(0, digits - 4));
   });
   el.addEventListener('pointermove', e => {
     if (!pending) return;
-    const dx = e.clientX - startX;
+    const dx = VP.pt(e).x - startX;
     if (!dragging) {
       if (Math.abs(dx) < DRAG_THRESHOLD) return;
       dragging = true;
@@ -3719,18 +3811,18 @@ function codenameInput(state) {
   return el;
 }
 
-// Auto-capitalise: the letter typed right after a space or a "/" becomes upper case (Occupation / Role / Pronouns
-// and skill names). Only reacts to single typed letters, so pasting, deleting and IME input are left alone.
+// Auto-capitalise: the first letter of every word becomes upper case as it is typed - the very first letter of the
+// field, and any letter typed right after a space or a "/" (Occupation / Role / Pronouns and skill names). Only reacts to single typed letters, so pasting, deleting and IME input are left alone.
 const CAP_AFTER_RE = /[\s\u00a0\/]/;
 function shouldCapitalize(prevChar, typed) {
-  return !!typed && typed.length === 1 && CAP_AFTER_RE.test(prevChar || '') &&
+  return !!typed && typed.length === 1 && (!prevChar || CAP_AFTER_RE.test(prevChar)) && // no previous char = start of the field
     typed !== typed.toUpperCase() && typed === typed.toLowerCase();
 }
 function autoCapAfterBreak(el, state) {
   el.addEventListener('input', e => {
     if (e.inputType !== 'insertText' || !e.data) return;
     const pos = el.selectionStart;
-    if (pos == null || pos < 2) return;
+    if (pos == null || pos < 1) return;
     if (!shouldCapitalize(el.value[pos - 2], el.value[pos - 1]) || el.value[pos - 1] !== e.data) return;
     el.value = el.value.slice(0, pos - 1) + el.value[pos - 1].toUpperCase() + el.value.slice(pos);
     el.setSelectionRange(pos, pos);
@@ -4389,8 +4481,8 @@ function openCropper(dataUrl, mimeType, onDone, onCancel) {
     if (!natW || !natH) { if (onCancel) onCancel(); return; }
 
     // Fit the image inside the viewport (minus dialog chrome).
-    const maxW = Math.max(160, Math.min(window.innerWidth - 56, 900));
-    const maxH = Math.max(160, window.innerHeight - 190);
+    const maxW = Math.max(160, Math.min(VP.iw() - 56, 900));
+    const maxH = Math.max(160, VP.ih() - 190);
     const scale = Math.min(maxW / natW, maxH / natH, 1);
     const dispW = Math.round(natW * scale), dispH = Math.round(natH * scale);
     imgEl.width = dispW; imgEl.height = dispH;
@@ -4446,11 +4538,13 @@ function openCropper(dataUrl, mimeType, onDone, onCancel) {
       e.preventDefault();
       box.setPointerCapture(e.pointerId);
       const corner = e.target.dataset && e.target.dataset.corner;
-      drag = { id: e.pointerId, corner: corner || null, sx: e.clientX, sy: e.clientY, x, y, w, h };
+      const p0 = VP.pt(e);
+      drag = { id: e.pointerId, corner: corner || null, sx: p0.x, sy: p0.y, x, y, w, h };
     });
     box.addEventListener('pointermove', e => {
       if (!drag || e.pointerId !== drag.id) return;
-      const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+      const p1 = VP.pt(e);
+      const dx = p1.x - drag.sx, dy = p1.y - drag.sy;
       if (!drag.corner) {
         x = Math.max(0, Math.min(dispW - w, drag.x + dx));
         y = Math.max(0, Math.min(dispH - h, drag.y + dy));
@@ -4982,7 +5076,7 @@ async function collectDebugInfo(canvas) {
   add('Viewport', window.innerWidth + 'x' + window.innerHeight);
   add('Visual viewport', window.visualViewport ? Math.round(window.visualViewport.width) + 'x' + Math.round(window.visualViewport.height) + ' scale ' + window.visualViewport.scale : '');
   add('Device pixel ratio', window.devicePixelRatio);
-  add('Orientation', screen.orientation ? screen.orientation.type : '');
+  add('Orientation', (screen.orientation ? screen.orientation.type : '') + (VP.on ? ' (page turned to landscape)' : ''));
   add('Touch points', nav.maxTouchPoints);
   add('CPU threads', nav.hardwareConcurrency);
   add('Device memory GB', nav.deviceMemory);
@@ -5100,7 +5194,7 @@ async function downloadCardPng(triggerBtn) {
   // nudged, and only inside the screenshot's clone (see onCloneEachNode below) - the live card is never touched.
   const iconSnaps = [...cardEl.querySelectorAll('svg.pixel-icon-svg')].map(svg => {
     const vb = svg.viewBox && svg.viewBox.baseVal;
-    const r = svg.getBoundingClientRect();
+    const r = VP.rect(svg);
     if (!vb || !vb.width || !vb.height || !r.width) return null;
     const cur = r.width / vb.width;
     const cell = Math.max(0.5, Math.round(cur * 2) / 2);
@@ -5406,7 +5500,7 @@ function tutSettle() {
     // Scroll the editor so the section being explained starts at the top of the panel.
     const body = document.querySelector('.editor-body');
     const el = document.querySelector(st.sel);
-    if (body && el) body.scrollTop += el.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+    if (body && el) body.scrollTop += VP.rect(el).top - VP.rect(body).top - 8;
   }
   tutPosition();
   tutLater(tutPosition, 120);
@@ -5418,7 +5512,7 @@ function tutTargetRect(st) {
   const list = st.els ? st.els().filter(Boolean) : [document.querySelector(st.sel || '.tut-none')].filter(Boolean);
   let r = null;
   for (const el of list) {
-    const b = el.getBoundingClientRect();
+    const b = VP.rect(el);
     if (b.width < 1 && b.height < 1) continue;
     r = r ? { left: Math.min(r.left, b.left), top: Math.min(r.top, b.top), right: Math.max(r.right, b.right), bottom: Math.max(r.bottom, b.bottom) }
           : { left: b.left, top: b.top, right: b.right, bottom: b.bottom };
@@ -5431,7 +5525,7 @@ function tutPosition() {
   if (!tutLayer) return;
   const { spot, arrow, card } = tutEls;
   const st = TUTORIAL_STEPS[tutIndex];
-  const vw = window.innerWidth, vh = window.innerHeight;
+  const vw = VP.iw(), vh = VP.ih();
   const cw = card.offsetWidth, ch = card.offsetHeight;
   const place = (left, top) => { card.style.left = `${Math.round(left)}px`; card.style.top = `${Math.round(top)}px`; };
 
@@ -5620,9 +5714,9 @@ van.derive(() => { document.documentElement.classList.toggle('khaki-off', !khaki
 // scaled with the card). On narrow windows the buttons keep their stacked strip along the window edge instead.
 function anchorToolbar(wrap, root, narrow) {
   if (!wrap) return;
-  const r = wrap.getBoundingClientRect();
+  const r = VP.rect(wrap);
   root.style.setProperty('--card-t', narrow ? '0px' : Math.round(r.top) + 'px');
-  root.style.setProperty('--card-r', narrow ? '0px' : Math.max(0, Math.round(root.clientWidth - r.right)) + 'px');
+  root.style.setProperty('--card-r', narrow ? '0px' : Math.max(0, Math.round(VP.w() - r.right)) + 'px');
 }
 function applyMobileScale() {
   // The card is never scaled: it is always drawn at its fixed 1280px design size, so window size
@@ -5650,7 +5744,7 @@ function applyMobileScale() {
     const M = editing ? 16 : 0; // menu closed: the card goes edge to edge, no margin around it
     const resR = editing ? ((dlg && dlg.offsetWidth) || 580) : (narrow ? 60 : 0);
     const resT = 0; // the toolbar buttons now sit on the card's top-right corner, so no strip is reserved for them
-    const aw = root.clientWidth - 2 * M - resR, ah = root.clientHeight - 2 * M - resT;
+    const aw = VP.w() - 2 * M - resR, ah = VP.h() - 2 * M - resT;
     // Menu closed: the card is scaled up or down to fill the window. Editor open: shrink-only (never above 100%).
     const k = Math.max(0.05, Math.min(editing ? 1 : Infinity, aw / CARD_W, ah / CARD_H));
     // Menu closed: grow the paper (in design pixels, whole numbers, same parity as 1280x731 so the centred content
@@ -5665,7 +5759,7 @@ function applyMobileScale() {
       wrap.style.transformOrigin = '0 0';
       app.style.margin = '0px';
       window.scrollTo(0, 0);
-      const r = wrap.getBoundingClientRect();
+      const r = VP.rect(wrap);
       const x = M + Math.max(0, (aw - PW * k) / 2), y = M + resT + Math.max(0, (ah - PH * k) / 2);
       wrap.style.transform = `translate(${Math.round(x - r.left)}px, ${Math.round(y - r.top)}px) scale(${k})`;
       anchorToolbar(wrap, root, narrow);
@@ -5676,13 +5770,15 @@ function applyMobileScale() {
   root.style.removeProperty('--paper-w'); root.style.removeProperty('--paper-h');
   if (wrap) { wrap.style.transform = ''; wrap.style.transformOrigin = ''; }
   const touch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-  const mx = Math.max(0, Math.floor((root.clientWidth - 2 * SIDE - CARD_W) / 2));
-  const my = touch ? 0 : Math.max(0, Math.floor((root.clientHeight - CARD_H) / 2));
+  const mx = Math.max(0, Math.floor((VP.w() - 2 * SIDE - CARD_W) / 2));
+  const my = touch ? 0 : Math.max(0, Math.floor((VP.h() - CARD_H) / 2));
   app.style.margin = my + 'px ' + mx + 'px';
   anchorToolbar(wrap, root, window.matchMedia('(max-width: 950px)').matches);
 }
 window.addEventListener('resize', applyMobileScale);
 window.addEventListener('orientationchange', applyMobileScale);
+// The head script calls this when the page is turned to / back from landscape (e.g. the OS rotated the viewport).
+window.__cibModeChanged = () => requestAnimationFrame(applyMobileScale);
 // Refit the card whenever the editor opens or closes (the timeout lets the panel finish showing first).
 van.derive(() => { dialogOpen.val; setTimeout(applyMobileScale, 30); });
 
