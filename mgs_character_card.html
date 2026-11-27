@@ -343,6 +343,25 @@ a {
   }
 
   /* ---------- TICKER TAPE ---------- */
+  /* "Please wait" overlay shown while the PNG is being prepared. It lives on <body>, outside .paper, so it is never part of the capture. */
+  .export-wait-overlay {
+    position: fixed; inset: 0; z-index: 2147483647;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(10, 12, 10, 0.72);
+    font-family: 'Peace Walker', 'Courier New', Courier, monospace;
+  }
+  .export-wait-box {
+    max-width: min(90vw, 560px); padding: 26px 34px; text-align: center;
+    background: #35352d; color: #e8e4cf; border: 2px solid #b8b79e;
+    font-size: 20px; letter-spacing: 2px; line-height: 1.5; text-transform: uppercase;
+  }
+  .export-wait-bar { height: 6px; margin-top: 16px; background: #1c1c1c; overflow: hidden; }
+  .export-wait-bar::after {
+    content: ''; display: block; height: 100%; width: 35%; background: #ff1a14;
+    animation: export-wait-slide 1s linear infinite;
+  }
+  @keyframes export-wait-slide { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+
   .ticker-tape {
     position: absolute;
     left: 0;
@@ -5162,6 +5181,12 @@ async function downloadCardPng(triggerBtn) {
     return;
   }
   if (triggerBtn) triggerBtn.disabled = true;
+  const waitOverlay = document.createElement('div');
+  waitOverlay.className = 'export-wait-overlay';
+  waitOverlay.setAttribute('role', 'status');
+  waitOverlay.setAttribute('aria-live', 'polite');
+  waitOverlay.innerHTML = '<div class="export-wait-box">Please Wait While We Prepare Your Membership Card<div class="export-wait-bar"></div></div>';
+  document.body.appendChild(waitOverlay);
   markUntouchedSkillsForExport(true);
   markUntouchedQuoteForExport(true);
   drawAllSickHatches();
@@ -5255,6 +5280,7 @@ async function downloadCardPng(triggerBtn) {
   } catch (err) {
     console.error('Failed to export card as PNG:', err);
   } finally {
+    waitOverlay.remove();
     if (fitWrap) fitWrap.style.transform = prevFitTransform;
     cardEl.classList.remove('exporting');
     applyMobileScale(); // puts the window-filling paper size back
