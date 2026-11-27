@@ -1006,7 +1006,7 @@ a {
      old Courier New layout used, so the header block keeps its exact height and nothing
      below it (stats, parameters, skills, about me) moves. */
   .codename {
-    font-family: var(--card-font, 'Inter Regular', Arial, sans-serif);
+    font-family: var(--card-font, 'Inter Regular', sans-serif);
     font-weight: normal;
     font-size: 1.66em;
     line-height: 47.1px;
@@ -1016,7 +1016,7 @@ a {
     top: -6px;
   }
   .subtitle {
-    font-family: var(--card-font, 'Inter Regular', Arial, sans-serif);
+    font-family: var(--card-font, 'Inter Regular', sans-serif);
     font-weight: normal;
     font-size: 1.575em;
     line-height: 23.6px;
@@ -1024,11 +1024,11 @@ a {
     word-spacing: 0.2em;
   }
   .skill-slot {
-    font-family: var(--card-font, 'Inter Regular', Arial, sans-serif);
+    font-family: var(--card-font, 'Inter Regular', sans-serif);
     letter-spacing: 0.04em;
   }
   .quote-box {
-    font-family: var(--card-font, 'Inter Regular', Arial, sans-serif);
+    font-family: var(--card-font, 'Inter Regular', sans-serif);
     letter-spacing: 0.04em;
     word-spacing: 0.1em;
     text-align: justify;
@@ -1036,7 +1036,7 @@ a {
 
   /* Ticker tape in Inter Regular (size and bar height unchanged). */
   .ticker-segment {
-    font-family: var(--card-font, 'Inter Regular', Arial, sans-serif);
+    font-family: var(--card-font, 'Inter Regular', sans-serif);
     font-weight: normal;
     letter-spacing: 0.06em;
     word-spacing: 0.15em;
@@ -2289,7 +2289,7 @@ a {
   .morale-rank-img { width: 24px; image-rendering: pixelated; }  /* source PNG is 24px wide: 1:1, no resampling */
 
   .codename { font-size: 25px; }   /* whole-pixel baseline with the 80/20 metrics (was 26.5px with Helvetica) */
-  .skill-slot { font-family: var(--card-font-18, var(--card-font, 'Inter Regular 18', Arial, sans-serif)); }
+  .skill-slot { font-family: var(--card-font-18, var(--card-font, 'Inter Regular 18', 'Inter Regular', sans-serif)); }
 
   .font-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
   .font-btn {
@@ -3717,7 +3717,7 @@ function quoteTextarea(state) {
     rows: QUOTE_MAX_ROWS,
     oninput: e => { state.val = e.target.value; },
     // Same font as the card's Bio Box (follows the FONTS section), so what you type matches what prints.
-    style: "font-family: var(--card-font, 'Inter Regular', Arial, sans-serif);",
+    style: "font-family: var(--card-font, 'Inter Regular', sans-serif);",
   });
   van.derive(() => {
     const v = state.val;
@@ -4819,7 +4819,7 @@ function loadCustomFontFile(file) {
     let st = document.getElementById('cib-custom-font');
     if (!st) { st = document.createElement('style'); st.id = 'cib-custom-font'; document.head.appendChild(st); }
     st.textContent = `@font-face { font-family: '${family}'; src: url(${reader.result}) format('${fmt}'); font-display: block; }`;
-    const apply = () => { cardFontCss.val = `'${family}', Arial, sans-serif`; cardFontNote.val = `Using ${file.name}`; };
+    const apply = () => { cardFontCss.val = `'${family}', 'Inter Regular', sans-serif`; cardFontNote.val = `Using ${file.name}`; };
     if (document.fonts && document.fonts.load) document.fonts.load(`20px '${family}'`).then(apply, apply); else apply();
   };
   reader.readAsDataURL(file);
@@ -4841,7 +4841,7 @@ function FontsSection() {
   const useName = () => {
     const n = nameInput.value.trim().replace(/['"\\;{}]/g, '');
     if (!n) return;
-    cardFontCss.val = `'${n}', 'Inter Regular', Arial, sans-serif`;
+    cardFontCss.val = `'${n}', 'Inter Regular', sans-serif`;
     cardFontNote.val = `Using installed font "${n}" (only shows on computers that have it)`;
   };
   nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); useName(); } });
@@ -5204,7 +5204,7 @@ async function downloadCardPng(triggerBtn) {
   let iconSnapIdx = 0;
   try {
     if (document.fonts) {
-      try { await Promise.all([document.fonts.load('38px "Peace Walker"'), document.fonts.ready]); } catch (e) {}
+      try { await Promise.all([document.fonts.load('38px "Peace Walker"'), document.fonts.load('25px "Inter Regular"'), document.fonts.load('18px "Inter Regular 18"'), document.fonts.ready]); } catch (e) {}
     }
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     const canvas = await modernScreenshot.domToCanvas(cardEl, {
