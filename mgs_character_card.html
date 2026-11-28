@@ -374,17 +374,17 @@ a {
     background: rgba(10, 12, 10, 0.72);
   }
   .export-reminder-box {
-    width: min(94vw, 520px); padding: 22px 26px 20px;
+    width: min(94vw, 700px); padding: 28px 32px 26px;
     background: #35352d; color: #e8e4cf; border: 2px solid #b8b79e;
-    font-family: 'Inter Regular', sans-serif; font-size: 16px; line-height: 1.5;
+    font-family: 'Inter Regular', sans-serif; font-size: 22px; line-height: 1.5;
   }
-  .export-reminder-count { font-family: 'Peace Walker', 'Courier New', Courier, monospace; font-size: 13px; letter-spacing: 2px; opacity: 0.7; text-transform: uppercase; margin-bottom: 6px; }
-  .export-reminder-title { font-family: 'Peace Walker', 'Courier New', Courier, monospace; font-size: 20px; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 10px; }
+  .export-reminder-count { font-family: 'Peace Walker', 'Courier New', Courier, monospace; font-size: 26px; letter-spacing: 2px; opacity: 0.85; text-transform: uppercase; margin-bottom: 6px; }
+  .export-reminder-title { font-family: 'Peace Walker', 'Courier New', Courier, monospace; font-size: 30px; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 14px; }
   .export-reminder-text { margin: 0 0 18px; }
   .export-reminder-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
   .export-reminder-actions button {
-    font-family: 'Peace Walker', 'Courier New', Courier, monospace; font-size: 15px; letter-spacing: 1.5px; text-transform: uppercase;
-    padding: 9px 14px; cursor: pointer; border: 2px solid #e8e4cf; background: transparent; color: #e8e4cf;
+    font-family: 'Peace Walker', 'Courier New', Courier, monospace; font-size: 21px; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 12px 20px; cursor: pointer; border: 2px solid #e8e4cf; background: transparent; color: #e8e4cf;
   }
   .export-reminder-actions button:hover, .export-reminder-actions button:focus-visible { outline: none; background: #4a4a3f; }
   .export-reminder-actions button.primary { background: #e8e4cf; color: #1c1c1c; }
@@ -5510,9 +5510,13 @@ function countBioRowsNow() {
 function collectDownloadReminders() {
   const list = [];
   const occ = clsPart.val.trim();
-  if (occ !== '' && occ !== DEFAULT_CLASS && CLASS_PRESETS.some(n => n.toLowerCase() === occ.toLowerCase())) {
+  if (occ === '' || occ === DEFAULT_CLASS) {
+    // Nothing written (blank, or still the "Occupation" placeholder text).
     list.push({ id: 'occupation', title: 'DO YOU HAVE A UNIQUE JOB TITLE? ',
-      text: 'Your occupation came from the drop-down list. Do not feel compelled to have to use one of the preset drop-down menu options for your occupation. Feel free to Type directly into the occupation box and share with us your exact real-life job title.' });
+      text: 'You have not entered an occupation yet. You can pick one from the drop-down menu, or Type directly into the occupation box and share with us your exact real-life job title.' });
+  } else if (CLASS_PRESETS.some(n => n.toLowerCase() === occ.toLowerCase())) {
+    list.push({ id: 'occupation', title: 'DO YOU HAVE A UNIQUE JOB TITLE? ',
+      text: 'Your occupation came from the drop-down list. Do not feel compelled to have to use one of the preset drop-down menu options for your occupation. Feel free to Type directly into the occupation box and share with us your job title.' });
   }
   if (Number(life.val) === DEFAULT_LIFE) {
     list.push({ id: 'life', title: 'CONSIDER MODIFYING YOUR LIFE BAR',
