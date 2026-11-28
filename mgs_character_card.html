@@ -360,7 +360,68 @@ a {
     content: ''; display: block; height: 100%; width: 35%; background: #ff1a14;
     animation: export-wait-slide 1s linear infinite;
   }
+  /* Debug menu (green editor theme; the hidden switch: double-click the square above the editor title) -> green wait message. */
+  html:not(.ed-yellow) .export-wait-overlay { background: rgba(2, 6, 4, 0.78); }
+  html:not(.ed-yellow) .export-wait-box { background: #07110c; color: #46ff96; border-color: #1f7a4c; box-shadow: 0 0 18px rgba(70, 255, 150, 0.25); }
+  html:not(.ed-yellow) .export-wait-bar { background: #020604; }
+  html:not(.ed-yellow) .export-wait-bar::after { background: #46ff96; }
   @keyframes export-wait-slide { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+
+  /* ---------- Pre-download reminders (one-time, ignorable pop-ups) ---------- */
+  .export-reminder-overlay {
+    position: fixed; inset: 0; z-index: 2147483000;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+    background: rgba(10, 12, 10, 0.72);
+  }
+  .export-reminder-box {
+    width: min(94vw, 520px); padding: 22px 26px 20px;
+    background: #35352d; color: #e8e4cf; border: 2px solid #b8b79e;
+    font-family: 'Inter Regular', sans-serif; font-size: 16px; line-height: 1.5;
+  }
+  .export-reminder-count { font-family: 'Peace Walker', 'Courier New', Courier, monospace; font-size: 13px; letter-spacing: 2px; opacity: 0.7; text-transform: uppercase; margin-bottom: 6px; }
+  .export-reminder-title { font-family: 'Peace Walker', 'Courier New', Courier, monospace; font-size: 20px; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 10px; }
+  .export-reminder-text { margin: 0 0 18px; }
+  .export-reminder-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+  .export-reminder-actions button {
+    font-family: 'Peace Walker', 'Courier New', Courier, monospace; font-size: 15px; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 9px 14px; cursor: pointer; border: 2px solid #e8e4cf; background: transparent; color: #e8e4cf;
+  }
+  .export-reminder-actions button:hover, .export-reminder-actions button:focus-visible { outline: none; background: #4a4a3f; }
+  .export-reminder-actions button.primary { background: #e8e4cf; color: #1c1c1c; }
+  .export-reminder-actions button.primary:hover, .export-reminder-actions button.primary:focus-visible { background: #fff; }
+  html:not(.ed-yellow) .export-reminder-overlay { background: rgba(2, 6, 4, 0.78); }
+  html:not(.ed-yellow) .export-reminder-box { background: #07110c; color: #46ff96; border-color: #1f7a4c; box-shadow: 0 0 18px rgba(70, 255, 150, 0.25); }
+  html:not(.ed-yellow) .export-reminder-actions button { border-color: #46ff96; color: #46ff96; }
+  html:not(.ed-yellow) .export-reminder-actions button:hover, html:not(.ed-yellow) .export-reminder-actions button:focus-visible { background: #0e2418; }
+  html:not(.ed-yellow) .export-reminder-actions button.primary { background: #46ff96; color: #050a07; }
+  html:not(.ed-yellow) .export-reminder-actions button.primary:hover, html:not(.ed-yellow) .export-reminder-actions button.primary:focus-visible { background: #7dffb8; }
+
+  /* ---------- Save to Memory Card ---------- */
+  .memory-save-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .memory-save-row .field { flex: 1 1 220px; min-width: 0; }
+  .memory-card-btn {
+    padding: 14px 14px 9px; border: 0; border-radius: 0;
+    clip-path: var(--ed-chamfer);
+    background: #06130c; box-shadow: inset 0 0 0 1px var(--cc-green); color: var(--cc-green);
+    cursor: pointer; font-family: var(--ed-pw); font-size: 22px; letter-spacing: 0.12em;
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+  .memory-card-btn:hover, .memory-card-btn:focus-visible { outline: none; background: var(--cc-green); color: var(--cc-field); }
+  .memory-card-btn.danger { background: #1a0808; box-shadow: inset 0 0 0 1px var(--cc-red); color: var(--cc-red); }
+  .memory-card-btn.danger:hover, .memory-card-btn.danger:focus-visible { background: var(--cc-red); color: var(--cc-field); }
+  .memory-card-status { min-height: 1.4em; margin-top: 8px; font-size: 13px; line-height: 1.4; color: var(--cc-green); }
+  .memory-card-status.error { color: var(--cc-red); }
+  .memory-card-empty { margin-top: 6px; font-size: 13px; color: var(--cc-dim); }
+  .memory-card-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .memory-card-item {
+    display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between;
+    padding: 9px 11px; border: 1px solid var(--cc-line); background: rgba(0, 0, 0, 0.25);
+  }
+  .memory-card-item .mc-info { flex: 1 1 160px; min-width: 0; }
+  .memory-card-item .mc-name { font-size: 15px; color: var(--cc-text); overflow-wrap: anywhere; }
+  .memory-card-item .mc-date { font-size: 12px; color: var(--cc-dim); }
+  .memory-card-item .mc-actions { display: flex; gap: 6px; }
+  .memory-card-item .memory-card-btn { padding: 10px 11px 6px; font-size: 17px; }
 
   .ticker-tape {
     position: absolute;
@@ -2047,7 +2108,7 @@ a {
   }
 
   /* Wide enough for two columns: IDENTITY | ABOUT ME on top, PARAMETERS AND SKILLS across the
-     full width, then WATERMARK | GAME OVER, with CREDITS below. */
+     full width, then WATERMARK | FONTS, MEMORY CARD, GAME OVER, with CREDITS below. */
   @media (min-width: 640px) and ((max-width: 950px), (hover: none) and (pointer: coarse)) {
     .editor-body {
       display: grid;
@@ -2061,8 +2122,9 @@ a {
     .editor-body > .editor-section:nth-child(2) { order: 3; grid-column: 1 / -1; }    /* parameters + skills */
     .editor-body > .editor-section:nth-child(4) { order: 4; }                         /* watermark */
     .editor-body > .editor-section:nth-child(5) { order: 5; }                         /* fonts */
-    .editor-body > .editor-section:nth-child(6) { order: 6; grid-column: 1 / -1; }    /* game over */
-    .editor-body > .editor-section:nth-child(7) { order: 7; grid-column: 1 / -1; }    /* credits */
+    .editor-body > .editor-section:nth-child(6) { order: 6; grid-column: 1 / -1; }    /* memory card */
+    .editor-body > .editor-section:nth-child(7) { order: 7; grid-column: 1 / -1; }    /* game over */
+    .editor-body > .editor-section:nth-child(8) { order: 8; grid-column: 1 / -1; }    /* credits */
     .editor-body > .editor-section:nth-child(3) textarea { min-height: 150px; }
   }
 
@@ -3369,7 +3431,11 @@ function loadSavedState() {
     return;
   }
   if (!data || typeof data !== 'object') return;
+  applyCardData(data);
+}
 
+// Puts a saved card (from the autosave or from a Memory Card slot) onto the card.
+function applyCardData(data) {
   if (typeof data.codename === 'string') codename.val = data.codename.slice(0, CODENAME_MAX);
   if (typeof data.clsPart === 'string') clsPart.val = data.clsPart.slice(0, subtitleRoom(clsPart));
   if (typeof data.rolePart === 'string') rolePart.val = data.rolePart.slice(0, subtitleRoom(rolePart));
@@ -4668,11 +4734,130 @@ function setupDropzone(container) {
   return dz;
 }
 
+// ---------- memory cards (several named designs kept in this browser) ----------
+// Only offered in the debug menu (green editor theme) for now; see the MemoryCardSection() line in the editor dialog.
+// "Save to Memory Card" keeps a named copy of the card in localStorage so people can come back later, load it, and keep
+// making more cards without losing any design. Nothing leaves the device and no file is downloaded.
+const MEMORY_KEY = 'mgsCharacterCard:memoryCards:v1';
+const MEMORY_MAX_CARDS = 30;
+const MEMORY_NAME_MAX = 40;
+
+function readMemoryCards() {
+  try {
+    const raw = localStorage.getItem(MEMORY_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr)
+      ? arr.filter(c => c && typeof c.id === 'string' && typeof c.name === 'string' && c.data && typeof c.data === 'object')
+      : [];
+  } catch (err) {
+    return [];
+  }
+}
+function writeMemoryCards(list) {
+  try { localStorage.setItem(MEMORY_KEY, JSON.stringify(list)); return true; } catch (err) { return false; }
+}
+
+const memoryCards = van.state(readMemoryCards());
+const memoryName = van.state('');
+const memoryStatus = van.state({ text: '', error: false });
+const setMemoryStatus = (text, error) => { memoryStatus.val = { text, error: !!error }; };
+// Keep the list right if another tab of the tool saves or deletes a card.
+window.addEventListener('storage', e => { if (e.key === MEMORY_KEY) memoryCards.val = readMemoryCards(); });
+
+function saveToMemoryCard() {
+  const name = (memoryName.val.trim() || codename.val.trim() || 'Untitled Card').slice(0, MEMORY_NAME_MAX);
+  const list = readMemoryCards();
+  const at = list.findIndex(c => c.name.toLowerCase() === name.toLowerCase());
+  if (at < 0 && list.length >= MEMORY_MAX_CARDS) {
+    setMemoryStatus('Your Memory Card is full (' + MEMORY_MAX_CARDS + ' cards). Delete one to make room.', true);
+    return;
+  }
+  if (at >= 0 && !window.confirm('A saved card named "' + name + '" already exists. Replace it with the card you are working on now?')) return;
+  const entry = {
+    id: at >= 0 ? list[at].id : 'mc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    name,
+    savedAt: Date.now(),
+    data: collectSerializable(),
+  };
+  const build = e => (at >= 0 ? list.map((c, i) => (i === at ? e : c)) : [...list, e]);
+  let note = '';
+  if (!writeMemoryCards(build(entry))) {
+    // Most likely the browser's storage is full because of the photo; try again without it.
+    entry.data = { ...entry.data, profileImg: null };
+    if (!writeMemoryCards(build(entry))) {
+      setMemoryStatus('Could not save: this browser\'s storage is full. Delete a saved card and try again.', true);
+      return;
+    }
+    note = ' The photo was left out because browser storage is nearly full.';
+  }
+  memoryCards.val = readMemoryCards();
+  setMemoryStatus('Saved "' + name + '" to your Memory Card.' + note, !!note);
+}
+
+function loadMemoryCard(id) {
+  const card = readMemoryCards().find(c => c.id === id);
+  if (!card) { setMemoryStatus('That saved card could not be found.', true); memoryCards.val = readMemoryCards(); return; }
+  if (!window.confirm('Load "' + card.name + '"? This replaces the card you are working on now. If you have not saved it to a Memory Card, those changes will be lost.')) return;
+  applyCardData(card.data);
+  if (typeof card.data.profileImg !== 'string' || !card.data.profileImg) clearProfileImage();
+  refreshProfileDisplay();
+  if (dropzoneInstance) {
+    try { dropzoneInstance.removeAllFiles(true); } catch (err) { /* no files to remove */ }
+  }
+  if (resyncParamsEditor) resyncParamsEditor();
+  persistNow();
+  setMemoryStatus('Loaded "' + card.name + '".', false);
+}
+
+function deleteMemoryCard(id) {
+  const list = readMemoryCards();
+  const card = list.find(c => c.id === id);
+  if (!card) { memoryCards.val = list; return; }
+  if (!window.confirm('Delete the saved card "' + card.name + '"? This cannot be undone.')) return;
+  if (!writeMemoryCards(list.filter(c => c.id !== id))) { setMemoryStatus('Could not delete that card.', true); return; }
+  memoryCards.val = readMemoryCards();
+  setMemoryStatus('Deleted "' + card.name + '".', false);
+}
+
+function MemoryCardSection() {
+  const nameEl = input({
+    type: 'text', maxLength: MEMORY_NAME_MAX, placeholder: 'Name this card (blank uses your codename)',
+    oninput: e => { memoryName.val = e.target.value; },
+    onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); saveToMemoryCard(); } },
+  });
+  return div({ class: 'editor-section memory-card-section' },
+    h3({}, span({ class: 'br' }, '<'), 'SAVE TO MEMORY CARD', span({ class: 'br' }, '>')),
+    div({ class: 'current-photo-hint' }, 'Keep a copy of this card in this browser so you can come back later and load it. Save as many designs as you like. Saved cards stay on this device and browser only.'),
+    div({ class: 'memory-save-row' },
+      Field('Card name', nameEl),
+      button({ type: 'button', class: 'memory-card-btn', onclick: saveToMemoryCard }, 'SAVE TO MEMORY CARD'),
+    ),
+    div({ class: () => 'memory-card-status' + (memoryStatus.val.error ? ' error' : ''), role: 'status', 'aria-live': 'polite' }, () => memoryStatus.val.text),
+    () => {
+      const list = memoryCards.val.slice().sort((a, b) => b.savedAt - a.savedAt);
+      if (!list.length) return div({ class: 'memory-card-empty' }, 'No saved cards yet.');
+      return div({ class: 'memory-card-list' },
+        ...list.map(card => div({ class: 'memory-card-item' },
+          div({ class: 'mc-info' },
+            div({ class: 'mc-name' }, card.name),
+            div({ class: 'mc-date' }, 'Saved ' + new Date(card.savedAt).toLocaleString()),
+          ),
+          div({ class: 'mc-actions' },
+            button({ type: 'button', class: 'memory-card-btn', onclick: () => loadMemoryCard(card.id) }, 'LOAD'),
+            button({ type: 'button', class: 'memory-card-btn danger', onclick: () => deleteMemoryCard(card.id) }, 'DELETE'),
+          ),
+        )),
+      );
+    },
+  );
+}
+
 // ---------- reset ----------
 
 function resetCard() {
   const confirmed = window.confirm(
-    'Reset this card to its default template? This clears every field, including your saved data, and cannot be undone.'
+    'Reset this card to its default template? This clears every field, including your saved data, and cannot be undone. Cards you saved to a Memory Card are not affected.'
   );
   if (!confirmed) return;
 
@@ -4804,7 +4989,7 @@ van.derive(() => {
   try { localStorage.setItem('cib-editor-theme', on ? 'yellow' : 'green'); } catch (e) {}
 });
 
-// ---------- Fonts section (only shown while the editor is in its green theme) ----------
+// ---------- Fonts section (only shown while the debug menu, the green editor theme, is on) ----------
 // Everything on the card that uses Inter Regular (name, Occupation/Role/Pronouns, skills, Bio Box, ticker) reads its
 // font from the --card-font CSS variable. Empty = the embedded Inter Regular. An uploaded font file is embedded
 // into the page as a data: @font-face, so it is also embedded in the exported PNG; a plain installed-font name or a
@@ -4957,6 +5142,8 @@ function Dialog() {
       ),
 
       () => editorYellow.val ? span({ style: 'display:none;' }) : FontsSection(),
+
+      () => editorYellow.val ? span({ style: 'display:none;' }) : MemoryCardSection(),
 
       div({ class: 'editor-section danger-zone' },
         h3({}, span({ class: 'br' }, '<'), 'GAME OVER', span({ class: 'br' }, '>')),
@@ -5296,12 +5483,155 @@ async function downloadCardPng(triggerBtn) {
   }
 }
 
+// ---------- reminders before a download ----------
+// Each reminder is its own one-time pop-up (shown at most once per page visit) and can be ignored, so the person can
+// always carry on with the download. Sicknesses are deliberately not checked.
+const shownDownloadReminders = new Set();
+let downloadReminderOpen = false;
+
+// Same row measurement the ABOUT ME box uses to enforce its 5-row limit (see editableMultiline).
+function countBioRowsNow() {
+  const node = document.querySelector('.paper .quote-box');
+  if (!node) return 0;
+  const cs = getComputedStyle(node);
+  const lh = parseFloat(cs.lineHeight);
+  if (!lh) return 0;
+  const prev = { flex: node.style.flex, height: node.style.height, overflow: node.style.overflow };
+  node.style.flex = 'none';
+  node.style.height = 'auto';
+  node.style.overflow = 'visible';
+  const contentH = node.offsetHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  node.style.flex = prev.flex;
+  node.style.height = prev.height;
+  node.style.overflow = prev.overflow;
+  return Math.round(contentH / lh);
+}
+
+function collectDownloadReminders() {
+  const list = [];
+  const occ = clsPart.val.trim();
+  if (occ !== '' && occ !== DEFAULT_CLASS && CLASS_PRESETS.some(n => n.toLowerCase() === occ.toLowerCase())) {
+    list.push({ id: 'occupation', title: 'DO YOU HAVE A UNIQUE JOB TITLE? ',
+      text: 'Your occupation came from the drop-down list. Do not feel compelled to have to use one of the preset drop-down menu options for your occupation. Feel free to Type directly into the occupation box and share with us your exact real-life job title.' });
+  }
+  if (Number(life.val) === DEFAULT_LIFE) {
+    list.push({ id: 'life', title: 'CONSIDER MODIFYING YOUR LIFE BAR',
+      text: 'Your LIFE bar is still at its default value. You can alter it to be whatever you want to reflect your max health or how much physical damage you can take before you need rations to be able to recover. ' });
+  }
+  if (Number(psyche.val) === DEFAULT_PSYCHE) {
+    list.push({ id: 'psyche', title: 'YOU CAN MODIFY YOUR PSYCHE BAR',
+      text: 'Your PSYCHE bar is still at its default value. You can change it to whatever you want to reflect your overall max stamina or mental fortitude. ' });
+  }
+  if (Number(gmp.val) === DEFAULT_GMP) {
+    list.push({ id: 'gmp', title: 'GMP VALUE NOT YET SET',
+      text: 'Your GMP is still set to the default amount. You can change its value to whatever you want to represent how much you contribute to the community. ' });
+  }
+  const defs = createDefaultParams();
+  const cur = paramsList.val;
+  const paramsDefault = cur.length === defs.length && defs.every((d, i) => {
+    const c = cur[i];
+    return c && !c.vacant && c.icon.val === d.icon.val && Number(c.percent.val) === Number(d.percent.val);
+  });
+  if (paramsDefault) {
+    list.push({ id: 'params', title: 'CONSIDER ALTERING YOUR PARAMETERS TO BETTER REPRESENT YOURSELF',
+      text: 'None of your parameter bars have been changed from their default values. You can adjust them to show off your own strengths and weaknesses. This will make your card even more unique.' });
+  }
+  const entered = skills.map((sk, i) => sk.name.val.trim())
+    .filter((n, i) => n !== '' && n !== (DEFAULT_SKILLS[i] ? DEFAULT_SKILLS[i].name : ''));
+  const presetsLower = SKILL_PRESETS.map(n => n.toLowerCase());
+  if (entered.length > 0 && entered.every(n => presetsLower.includes(n.toLowerCase()))) {
+    list.push({ id: 'skills', title: 'FEEL FREE TO BE CREATIVE WITH YOUR SKILL NAMES',
+      text: 'All of your skills came from the drop-down list. You can also type your own custom skill name directly into the skill boxes. Dont be afraid to come up with a skill name unlike any motherbase has seen before!' });
+  }
+  // Skill icons: only skills that actually show on the card (named, not left at the default name) count, and only when the
+  // pixel icons are on, because that is the only time clicking a skill icon opens the picker.
+  const shownSkills = skills.filter((sk, i) => {
+    const n = sk.name.val.trim();
+    return n !== '' && n !== (DEFAULT_SKILLS[i] ? DEFAULT_SKILLS[i].name : '');
+  });
+  if (pixelIconMode.val && shownSkills.length > 0 && shownSkills.every(sk => sk.icon.val === '\u2B50')) {
+    list.push({ id: 'skillicons', title: 'DID YOU KNOW YOU CAN CUSTOMIZE YOUR SKILL ICONS?',
+      text: 'All of your skills still use the default Special icon. You can click a skill\u2019s icon to choose from six different designs. Each represents one of the core parameters of your membership card. Combat, Research and Development, Mess Hall, Medical and Intel. You can also leave it as is to represent a special icon for any type of roles.' });
+  }
+  const bioUntouched = quote.val.trim() === '' || quote.val === DEFAULT_QUOTE;
+  const bioRows = bioUntouched ? 0 : countBioRowsNow();
+  if (bioUntouched || (bioRows > 0 && bioRows <= QUOTE_MAX_ROWS / 2)) {
+    list.push({ id: 'bio', title: 'DONT BE SHY! REALLY INTRODUCE YOURSELF!',
+      text: 'Your ABOUT ME box is only about half full or less. You can add more to introduce yourself if you want to.' });
+  }
+  return list;
+}
+
+// Resolves true to carry on with the download, false to go back and edit.
+function showDownloadReminder(r, index, total) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'export-reminder-overlay';
+    const box = document.createElement('div');
+    box.className = 'export-reminder-box';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-label', r.title);
+    if (total > 1) {
+      const count = document.createElement('div');
+      count.className = 'export-reminder-count';
+      count.textContent = 'Reminder ' + (index + 1) + ' of ' + total;
+      box.appendChild(count);
+    }
+    const h = document.createElement('h2');
+    h.className = 'export-reminder-title';
+    h.textContent = r.title;
+    const t = document.createElement('p');
+    t.className = 'export-reminder-text';
+    t.textContent = r.text;
+    const actions = document.createElement('div');
+    actions.className = 'export-reminder-actions';
+    const ignore = document.createElement('button');
+    ignore.type = 'button';
+    ignore.textContent = 'Ignore And Continue';
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'primary';
+    back.textContent = 'Go Back And Edit';
+    actions.append(ignore, back);
+    box.append(h, t, actions);
+    overlay.appendChild(box);
+    const finish = (goOn) => {
+      document.removeEventListener('keydown', onKey, true);
+      overlay.remove();
+      resolve(goOn);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); finish(false); } };
+    ignore.addEventListener('click', () => finish(true));
+    back.addEventListener('click', () => finish(false));
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(overlay);
+    back.focus();
+  });
+}
+
+async function requestCardDownload(triggerBtn) {
+  if (downloadReminderOpen) return;
+  downloadReminderOpen = true;
+  try {
+    const pending = collectDownloadReminders().filter(r => !shownDownloadReminders.has(r.id));
+    for (let i = 0; i < pending.length; i++) {
+      shownDownloadReminders.add(pending[i].id);
+      const goOn = await showDownloadReminder(pending[i], i, pending.length);
+      if (!goOn) return;
+    }
+  } finally {
+    downloadReminderOpen = false;
+  }
+  await downloadCardPng(triggerBtn);
+}
+
 function DownloadButton() {
   const btn = button({
     class: 'download-btn',
     'aria-label': 'Download card as PNG',
     title: 'Download card as PNG',
-    onclick: (e) => downloadCardPng(e.currentTarget),
+    onclick: (e) => requestCardDownload(e.currentTarget),
   }, '\u2913');
   return btn;
 }
@@ -5363,6 +5693,7 @@ function LinktreeButton() {
 // box around one feature, and points an animated arrow at it from a small instruction card.
 // Steps marked `editor: true` open the editor panel first (and close it again afterwards).
 // `sel` is a CSS selector for the feature to highlight; steps without one are centred title slides.
+// Steps marked `debugOnly: true` only appear while the debug menu (green editor theme) is on.
 const TUTORIAL_STEPS = [
   { title: 'WELCOME TO COSPLAYERS IN BOXES',
     text: 'Cosplayers In Boxes offers their members a way to make their own Membership Cards! This quick tour of the app shows you how to use the tool and what every part means and does. Use the buttons or your \u2190 \u2192 keys to move around, and Esc to leave at any time.' },
@@ -5402,6 +5733,8 @@ const TUTORIAL_STEPS = [
     text: 'Allow you to write your bio here instead of on the card. It is capped at 5 rows so it always fits the Bio Box.' },
   { title: 'CARD WATERMARK', editor: true, sel: '.editor-body > .editor-section:nth-child(4)',
     text: 'Choose the background artwork behind the card. The khaki switch turns the paper colour off, which is handy when printing on coloured card stock.' },
+  { title: 'NOW LET ME READ YOUR MIND', debugOnly: true, editor: true, sel: '.editor-body > .editor-section.memory-card-section',
+    text: 'Want to make more than one card? Type a name and press Save To Memory Card to keep a copy of the design you are working on. Come back any time, press Load beside it, and pick up right where you left off. Each saved card keeps its own photo, text, bars and skills, so you can make as many designs as you like without losing any of them. Press Delete to remove one you no longer need. Saved cards stay in this browser on this device, so use the same browser when you return and avoid clearing your browser data. Loading a card replaces what is on screen, so save your current card first if you want to keep it.' },
   { title: 'SNAKE? SNAKE? SNAAAAAAAAAAKE!', editor: true, sel: '.editor-body > .editor-section.danger-zone',
     text: 'Reset Card puts every field back to the default template. This cannot be undone, so use it only when necessary or if an update for the tool is available and the reset is recommended by Major Tommy.' },
   { title: 'DOWNLOAD', sel: '.download-btn',
@@ -5412,6 +5745,7 @@ const TUTORIAL_STEPS = [
 let tutLayer = null;
 let tutEls = null;
 let tutIndex = 0;
+let tutSteps = TUTORIAL_STEPS; // the steps of the tour currently running (debug-only steps dropped unless the debug menu is on)
 let tutTimers = [];
 
 function tutCompactEditor() {
@@ -5458,6 +5792,7 @@ function tutBuild() {
 
 function tutOpen() {
   if (tutLayer) return;
+  tutSteps = TUTORIAL_STEPS.filter(st => !st.debugOnly || !editorYellow.val);
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   dialogOpen.val = false;
   tutEls = tutBuild();
@@ -5481,7 +5816,7 @@ function tutClose() {
 }
 
 function tutNext() {
-  if (tutIndex >= TUTORIAL_STEPS.length - 1) tutClose();
+  if (tutIndex >= tutSteps.length - 1) tutClose();
   else tutShow(tutIndex + 1);
 }
 
@@ -5500,9 +5835,9 @@ function tutShow(i) {
   if (!tutLayer) return;
   tutTimers.forEach(clearTimeout);
   tutTimers = [];
-  const n = TUTORIAL_STEPS.length;
+  const n = tutSteps.length;
   tutIndex = clamp(i, 0, n - 1);
-  const st = TUTORIAL_STEPS[tutIndex];
+  const st = tutSteps[tutIndex];
   const e = tutEls;
   e.step.textContent = `STEP ${String(tutIndex + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`;
   e.title.textContent = st.title;
@@ -5528,7 +5863,7 @@ function tutShow(i) {
 
 function tutSettle() {
   if (!tutLayer) return;
-  const st = TUTORIAL_STEPS[tutIndex];
+  const st = tutSteps[tutIndex];
   if (st.editor) {
     // Scroll the editor so the section being explained starts at the top of the panel.
     const body = document.querySelector('.editor-body');
@@ -5557,7 +5892,7 @@ function tutTargetRect(st) {
 function tutPosition() {
   if (!tutLayer) return;
   const { spot, arrow, card } = tutEls;
-  const st = TUTORIAL_STEPS[tutIndex];
+  const st = tutSteps[tutIndex];
   const vw = VP.iw(), vh = VP.ih();
   const cw = card.offsetWidth, ch = card.offsetHeight;
   const place = (left, top) => { card.style.left = `${Math.round(left)}px`; card.style.top = `${Math.round(top)}px`; };
